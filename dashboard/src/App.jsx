@@ -9,6 +9,7 @@ import DeveloperActivityChart from "./DeveloperActivityChart";
 import ContextSwitchChart from "./ContextSwitchChart";
 import ContextSwitchTaxChart from "./ContextSwitchTaxChart";
 import DeveloperPerformance from "./DeveloperPerformance";
+import DataSourceSummary from "./DataSourceSummary";
 
 function App() {
   // -----------------------------
@@ -154,7 +155,7 @@ function App() {
   ]).size;
 
   // -----------------------------
-  // Developer performance summary
+  // Developer performance
   // -----------------------------
   const developerPerformanceData = Object.keys(developerActivity).map(
     (developer) => {
@@ -196,6 +197,24 @@ function App() {
       };
     }
   );
+
+  // -----------------------------
+  // Data source summary
+  // -----------------------------
+  const dataSourceSummary = [
+    {
+      name: "GitHub",
+      records: githubData.records.length,
+    },
+    {
+      name: "Slack",
+      records: slackData.records.length,
+    },
+    {
+      name: "IDE",
+      records: ideData.records.length,
+    },
+  ];
 
   return (
     <main
@@ -284,6 +303,21 @@ function App() {
           </Card>
         </div>
 
+        {/* Data Sources */}
+        <div style={{ marginBottom: "28px" }}>
+          <Card>
+            <Title>Data Sources Overview</Title>
+
+            <Text>
+              Activity records ingested from connected developer tools.
+            </Text>
+
+            <DataSourceSummary
+              data={dataSourceSummary}
+            />
+          </Card>
+        </div>
+
         {/* Developer Performance */}
         <div style={{ marginBottom: "28px" }}>
           <Card>
@@ -339,8 +373,8 @@ function App() {
             <Title>Context Switching Analysis</Title>
 
             <Text>
-              Number of transitions between GitHub, Slack, and
-              IDE activity.
+              Number of transitions between GitHub, Slack,
+              and IDE activity.
             </Text>
 
             <div style={{ marginTop: "20px" }}>
@@ -379,8 +413,7 @@ function App() {
                 key={index}
                 style={{
                   padding: "16px 0",
-                  borderBottom:
-                    "1px solid #e5e7eb",
+                  borderBottom: "1px solid #e5e7eb",
                 }}
               >
                 <Text>
@@ -406,8 +439,7 @@ function App() {
                 key={index}
                 style={{
                   padding: "16px 0",
-                  borderBottom:
-                    "1px solid #e5e7eb",
+                  borderBottom: "1px solid #e5e7eb",
                 }}
               >
                 <Text>
@@ -433,8 +465,7 @@ function App() {
                 key={index}
                 style={{
                   padding: "16px 0",
-                  borderBottom:
-                    "1px solid #e5e7eb",
+                  borderBottom: "1px solid #e5e7eb",
                 }}
               >
                 <Text>
@@ -443,8 +474,7 @@ function App() {
                 </Text>
 
                 <Text>
-                  {record.file} —{" "}
-                  {record.minutes_coding} minutes
+                  {record.file} — {record.minutes_coding} minutes
                 </Text>
 
                 <Text>{record.timestamp}</Text>
