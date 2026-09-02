@@ -3,8 +3,43 @@ import { Card, Metric, Text, Title } from "@tremor/react";
 import githubData from "./data/github_activity.json";
 import slackData from "./data/slack_activity.json";
 import ideData from "./data/ide_activity.json";
+import ActivityChart from "./ActivityChart";
 
 function App() {
+  const activityData = [
+    {
+      time: "09:00",
+      activity: 1,
+    },
+    {
+      time: "09:30",
+      activity: 2,
+    },
+    {
+      time: "09:45",
+      activity: 3,
+    },
+    {
+      time: "10:30",
+      activity: 4,
+    },
+    {
+      time: "10:45",
+      activity: 5,
+    },
+    {
+      time: "11:00",
+      activity: 4,
+    },
+    {
+      time: "11:15",
+      activity: 3,
+    },
+    {
+      time: "11:20",
+      activity: 2,
+    },
+  ];  
 const totalCommits = githubData.records.filter(
 (record) => record.action === "commit"
 ).length;
@@ -81,7 +116,16 @@ fontFamily: "Arial, sans-serif",
       <Metric>{totalCodingMinutes}</Metric>
     </Card>
   </div>
+      <div style={{ marginTop: "40px" }}>
+        <Card>
+          <Title>Developer Activity</Title>
+          <Text>Activity timeline from CogniStream ingestion data</Text>
 
+          <div style={{ marginTop: "20px" }}>
+            <ActivityChart data={activityData} />
+          </div>
+        </Card>
+      </div>
   <div style={{ marginTop: "40px" }}>
     <Card>
       <Title>GitHub Activity</Title>
