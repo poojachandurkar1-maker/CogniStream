@@ -6,6 +6,7 @@ import ideData from "./data/ide_activity.json";
 
 import ActivityChart from "./ActivityChart";
 import DeveloperActivityChart from "./DeveloperActivityChart";
+import ContextSwitchChart from "./ContextSwitchChart";
 
 function App() {
   // Combined activity timeline
@@ -56,6 +57,56 @@ function App() {
       developer,
       activity,
     })
+  );
+
+  // Context switching analysis
+  const allEvents = [
+    ...githubData.records.map((record) => ({
+      developer: record.developer,
+      source: "GitHub",
+      timestamp: record.timestamp,
+    })),
+    ...slackData.records.map((record) => ({
+      developer: record.user,
+      source: "Slack",
+      timestamp: record.timestamp,
+    })),
+    ...ideData.records.map((record) => ({
+      developer: record.developer,
+      source: "IDE",
+      timestamp: record.timestamp,
+    })),
+  ];
+
+  const eventsByDeveloper = {};
+
+  allEvents.forEach((event) => {
+    if (!eventsByDeveloper[event.developer]) {
+      eventsByDeveloper[event.developer] = [];
+    }
+
+    eventsByDeveloper[event.developer].push(event);
+  });
+
+  const contextSwitchData = Object.entries(eventsByDeveloper).map(
+    ([developer, events]) => {
+      const sortedEvents = [...events].sort((a, b) =>
+        a.timestamp.localeCompare(b.timestamp)
+      );
+
+      let switches = 0;
+
+      for (let i = 1; i < sortedEvents.length; i++) {
+        if (sortedEvents[i].source !== sortedEvents[i - 1].source) {
+          switches += 1;
+        }
+      }
+
+      return {
+        developer,
+        switches,
+      };
+    }
   );
 
   const totalCommits = githubData.records.filter(
@@ -159,6 +210,21 @@ function App() {
 
           <div style={{ marginTop: "20px" }}>
             <DeveloperActivityChart data={developerActivityData} />
+          </div>
+        </Card>
+      </div>
+
+      <div style={{ marginTop: "40px" }}>
+        <Card>
+          <Title>Context Switching Analysis</Title>
+
+          <Text>
+            Number of times developers switched between GitHub, Slack, and IDE
+            activity
+          </Text>
+
+          <div style={{ marginTop: "20px" }}>
+            <ContextSwitchChart data={contextSwitchData} />
           </div>
         </Card>
       </div>
