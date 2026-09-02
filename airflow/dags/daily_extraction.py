@@ -15,16 +15,19 @@ with DAG(
     extract_github = BashOperator(
         task_id="extract_github",
         bash_command="python python/extractors/github_extractor.py",
+        cwd="/opt/airflow",
     )
 
     extract_slack = BashOperator(
         task_id="extract_slack",
         bash_command="python python/extractors/slack_extractor.py",
+        cwd="/opt/airflow",
     )
 
     extract_ide = BashOperator(
         task_id="extract_ide",
         bash_command="python python/extractors/ide_extractor.py",
+        cwd="/opt/airflow",
     )
 
     [extract_github, extract_slack, extract_ide]

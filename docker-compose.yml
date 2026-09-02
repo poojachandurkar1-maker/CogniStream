@@ -1,0 +1,18 @@
+services:
+  airflow:
+    image: apache/airflow:3.0.6
+
+    environment:
+      AIRFLOW__CORE__EXECUTOR: SequentialExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "false"
+
+    ports:
+      - "8080:8080"
+
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./python:/opt/airflow/python
+      - ./data:/opt/airflow/data
+
+    command: standalone
