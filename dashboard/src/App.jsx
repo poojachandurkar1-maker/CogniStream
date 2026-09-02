@@ -5,9 +5,10 @@ import slackData from "./data/slack_activity.json";
 import ideData from "./data/ide_activity.json";
 
 import ActivityChart from "./ActivityChart";
+import DeveloperActivityChart from "./DeveloperActivityChart";
 
 function App() {
-  // Build activity data from the actual GitHub, Slack, and IDE records
+  // Combined activity timeline
   const activityData = [
     ...githubData.records.map((record) => ({
       time: record.timestamp.substring(11, 16),
@@ -22,6 +23,40 @@ function App() {
       activity: 1,
     })),
   ].sort((a, b) => a.time.localeCompare(b.time));
+
+  // Developer activity breakdown
+  const developerActivity = {};
+
+  githubData.records.forEach((record) => {
+    if (!developerActivity[record.developer]) {
+      developerActivity[record.developer] = 0;
+    }
+
+    developerActivity[record.developer] += 1;
+  });
+
+  slackData.records.forEach((record) => {
+    if (!developerActivity[record.user]) {
+      developerActivity[record.user] = 0;
+    }
+
+    developerActivity[record.user] += 1;
+  });
+
+  ideData.records.forEach((record) => {
+    if (!developerActivity[record.developer]) {
+      developerActivity[record.developer] = 0;
+    }
+
+    developerActivity[record.developer] += 1;
+  });
+
+  const developerActivityData = Object.entries(developerActivity).map(
+    ([developer, activity]) => ({
+      developer,
+      activity,
+    })
+  );
 
   const totalCommits = githubData.records.filter(
     (record) => record.action === "commit"
@@ -110,6 +145,20 @@ function App() {
 
           <div style={{ marginTop: "20px" }}>
             <ActivityChart data={activityData} />
+          </div>
+        </Card>
+      </div>
+
+      <div style={{ marginTop: "40px" }}>
+        <Card>
+          <Title>Activity by Developer</Title>
+
+          <Text>
+            Combined GitHub, Slack, and IDE activity for each developer
+          </Text>
+
+          <div style={{ marginTop: "20px" }}>
+            <DeveloperActivityChart data={developerActivityData} />
           </div>
         </Card>
       </div>
