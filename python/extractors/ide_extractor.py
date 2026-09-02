@@ -29,20 +29,29 @@ MOCK_IDE_DATA = [
 
 
 def extract_ide_data():
-    os.makedirs("data/raw", exist_ok=True)
+    output_directory = "data/raw"
+    os.makedirs(output_directory, exist_ok=True)
 
-    output_file = "data/raw/ide_activity.json"
+    output_file = os.path.join(
+        output_directory,
+        "ide_activity.json"
+    )
 
     result = {
         "source": "ide_mock",
         "extracted_at": datetime.now().isoformat(),
+        "record_count": len(MOCK_IDE_DATA),
         "records": MOCK_IDE_DATA
     }
 
     with open(output_file, "w", encoding="utf-8") as file:
         json.dump(result, file, indent=4)
 
-    print(f"IDE data extracted successfully: {output_file}")
+    print(
+        f"IDE extraction completed: "
+        f"{len(MOCK_IDE_DATA)} records"
+    )
+    print(f"Output: {output_file}")
 
 
 if __name__ == "__main__":
