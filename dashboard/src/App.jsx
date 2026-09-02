@@ -1,9 +1,6 @@
+
 import { useMemo, useState } from "react";
 import { Card, Metric, Text, Title } from "@tremor/react";
-
-import githubData from "./data/github_activity.json";
-import slackData from "./data/slack_activity.json";
-import ideData from "./data/ide_activity.json";
 
 import ActivityChart from "./ActivityChart";
 import DeveloperActivityChart from "./DeveloperActivityChart";
@@ -12,6 +9,12 @@ import ContextSwitchTaxChart from "./ContextSwitchTaxChart";
 import DeveloperPerformance from "./DeveloperPerformance";
 import DataSourceSummary from "./DataSourceSummary";
 import DeveloperRiskRanking from "./DeveloperRiskRanking";
+import DeveloperFlowScore from "./DeveloperFlowScore";
+import TeamHealthOverview from "./TeamHealthOverview";
+
+import githubData from "./data/github_activity.json";
+import slackData from "./data/slack_activity.json";
+import ideData from "./data/ide_activity.json";
 
 function App() {
   const [selectedDeveloper, setSelectedDeveloper] =
@@ -23,9 +26,11 @@ function App() {
   const [selectedSource, setSelectedSource] =
     useState("All Sources");
 
-  // --------------------------------------------------
-  // Developer List
-  // --------------------------------------------------
+  /*
+   * --------------------------------------------------
+   * Developer List
+   * --------------------------------------------------
+   */
 
   const developers = useMemo(() => {
     const names = new Set();
@@ -51,9 +56,11 @@ function App() {
     return Array.from(names).sort();
   }, []);
 
-  // --------------------------------------------------
-  // Time Filter
-  // --------------------------------------------------
+  /*
+   * --------------------------------------------------
+   * Time Filter
+   * --------------------------------------------------
+   */
 
   const isWithinTimeRange = (timestamp) => {
     if (selectedTimeRange === "All Time") {
@@ -77,12 +84,17 @@ function App() {
     return true;
   };
 
-  // --------------------------------------------------
-  // Filtered Data
-  // --------------------------------------------------
+  /*
+   * --------------------------------------------------
+   * Filtered Source Data
+   * --------------------------------------------------
+   */
 
   const filteredGithub = useMemo(() => {
-    if (selectedSource === "Slack" || selectedSource === "IDE") {
+    if (
+      selectedSource !== "All Sources" &&
+      selectedSource !== "GitHub"
+    ) {
       return [];
     }
 
@@ -91,14 +103,23 @@ function App() {
         selectedDeveloper === "All Developers" ||
         record.developer === selectedDeveloper;
 
-      const timeMatch = isWithinTimeRange(record.timestamp);
+      const timeMatch = isWithinTimeRange(
+        record.timestamp
+      );
 
       return developerMatch && timeMatch;
     });
-  }, [selectedDeveloper, selectedTimeRange, selectedSource]);
+  }, [
+    selectedDeveloper,
+    selectedTimeRange,
+    selectedSource,
+  ]);
 
   const filteredSlack = useMemo(() => {
-    if (selectedSource === "GitHub" || selectedSource === "IDE") {
+    if (
+      selectedSource !== "All Sources" &&
+      selectedSource !== "Slack"
+    ) {
       return [];
     }
 
@@ -107,14 +128,23 @@ function App() {
         selectedDeveloper === "All Developers" ||
         record.user === selectedDeveloper;
 
-      const timeMatch = isWithinTimeRange(record.timestamp);
+      const timeMatch = isWithinTimeRange(
+        record.timestamp
+      );
 
       return developerMatch && timeMatch;
     });
-  }, [selectedDeveloper, selectedTimeRange, selectedSource]);
+  }, [
+    selectedDeveloper,
+    selectedTimeRange,
+    selectedSource,
+  ]);
 
   const filteredIde = useMemo(() => {
-    if (selectedSource === "GitHub" || selectedSource === "Slack") {
+    if (
+      selectedSource !== "All Sources" &&
+      selectedSource !== "IDE"
+    ) {
       return [];
     }
 
@@ -123,406 +153,434 @@ function App() {
         selectedDeveloper === "All Developers" ||
         record.developer === selectedDeveloper;
 
-      const timeMatch = isWithinTimeRange(record.timestamp);
+      const timeMatch = isWithinTimeRange(
+        record.timestamp
+      );
 
       return developerMatch && timeMatch;
     });
-  }, [selectedDeveloper, selectedTimeRange, selectedSource]);
-
-  // --------------------------------------------------
-  // Activity Timeline
-  // --------------------------------------------------
-
-  const activityTimeline = useMemo(() => {
-    const activities = [];
-
-    filteredGithub.forEach((record) => {
-      activities.push({
-        time: new Date(record.timestamp).toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        timestamp: record.timestamp,
-        activity: 1,
-        source: "GitHub",
-        developer: record.developer,
-      });
-    });
-
-    filteredSlack.forEach((record) => {
-      activities.push({
-        time: new Date(record.timestamp).toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        timestamp: record.timestamp,
-        activity: 1,
-        source: "Slack",
-        developer: record.user,
-      });
-    });
-
-    filteredIde.forEach((record) => {
-      activities.push({
-        time: new Date(record.timestamp).toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        timestamp: record.timestamp,
-        activity: 1,
-        source: "IDE",
-        developer: record.developer,
-      });
-    });
-
-    activities.sort(
-      (a, b) =>
-        new Date(a.timestamp) - new Date(b.timestamp)
-    );
-
-    return activities;
-  }, [filteredGithub, filteredSlack, filteredIde]);
-
-  // --------------------------------------------------
-  // Activity By Developer
-  // --------------------------------------------------
-
-  const developerActivity = useMemo(() => {
-    return developers
-      .map((developer) => {
-        const githubCount = filteredGithub.filter(
-          (record) => record.developer === developer
-        ).length;
-
-        const slackCount = filteredSlack.filter(
-          (record) => record.user === developer
-        ).length;
-
-        const ideCount = filteredIde.filter(
-          (record) => record.developer === developer
-        ).length;
-
-        return {
-          developer,
-          activity: githubCount + slackCount + ideCount,
-        };
-      })
-      .filter((item) => item.activity > 0);
-  }, [developers, filteredGithub, filteredSlack, filteredIde]);
-
-  // --------------------------------------------------
-  // Context Switching
-  // --------------------------------------------------
-
-  const contextSwitchData = useMemo(() => {
-    const result = {};
-
-    developers.forEach((developer) => {
-      const activities = [];
-
-      filteredGithub
-        .filter((record) => record.developer === developer)
-        .forEach((record) => {
-          activities.push({
-            developer,
-            source: "GitHub",
-            timestamp: record.timestamp,
-          });
-        });
-
-      filteredSlack
-        .filter((record) => record.user === developer)
-        .forEach((record) => {
-          activities.push({
-            developer,
-            source: "Slack",
-            timestamp: record.timestamp,
-          });
-        });
-
-      filteredIde
-        .filter((record) => record.developer === developer)
-        .forEach((record) => {
-          activities.push({
-            developer,
-            source: "IDE",
-            timestamp: record.timestamp,
-          });
-        });
-
-      activities.sort(
-        (a, b) =>
-          new Date(a.timestamp) -
-          new Date(b.timestamp)
-      );
-
-      let switches = 0;
-
-      for (let i = 1; i < activities.length; i++) {
-        if (
-          activities[i].source !==
-          activities[i - 1].source
-        ) {
-          switches++;
-        }
-      }
-
-      result[developer] = switches;
-    });
-
-    return Object.entries(result)
-      .map(([developer, switches]) => ({
-        developer,
-        switches,
-      }))
-      .filter(
-        (item) =>
-          selectedDeveloper === "All Developers" ||
-          item.developer === selectedDeveloper
-      );
   }, [
-    developers,
-    filteredGithub,
-    filteredSlack,
-    filteredIde,
     selectedDeveloper,
+    selectedTimeRange,
+    selectedSource,
   ]);
 
-  // --------------------------------------------------
-  // Context Switching Tax
-  // --------------------------------------------------
-
-  const MINUTES_PER_SWITCH = 5;
-
-  const contextSwitchTaxData = useMemo(() => {
-    return contextSwitchData.map((item) => ({
-      developer: item.developer,
-      switches: item.switches,
-      lostMinutes:
-        item.switches * MINUTES_PER_SWITCH,
-    }));
-  }, [contextSwitchData]);
-
-  // --------------------------------------------------
-  // Developer Performance
-  // --------------------------------------------------
-
-  const developerPerformanceData = useMemo(() => {
-    return developers
-      .map((developer) => {
-        const githubCount = filteredGithub.filter(
-          (record) => record.developer === developer
-        ).length;
-
-        const slackCount = filteredSlack.filter(
-          (record) => record.user === developer
-        ).length;
-
-        const ideRecords = filteredIde.filter(
-          (record) => record.developer === developer
-        );
-
-        const codingMinutes = ideRecords.reduce(
-          (total, record) =>
-            total + Number(record.minutes_coding || 0),
-          0
-        );
-
-        const activity =
-          githubCount +
-          slackCount +
-          ideRecords.length;
-
-        const switchRecord = contextSwitchData.find(
-          (item) => item.developer === developer
-        );
-
-        const switches = switchRecord
-          ? switchRecord.switches
-          : 0;
-
-        const lostMinutes =
-          switches * MINUTES_PER_SWITCH;
-
-        let status = "Stable";
-
-        if (switches >= 3) {
-          status = "High Cognitive Load";
-        } else if (switches >= 2) {
-          status = "Moderate Cognitive Load";
-        } else if (activity === 0) {
-          status = "Inactive";
-        }
-
-        return {
-          name: developer,
-          activity,
-          codingMinutes,
-          switches,
-          lostMinutes,
-          status,
-        };
-      })
-      .filter(
-        (developer) =>
-          selectedDeveloper === "All Developers" ||
-          developer.name === selectedDeveloper
-      )
-      .filter(
-        (developer) => developer.activity > 0
-      );
-  }, [
-    developers,
-    filteredGithub,
-    filteredSlack,
-    filteredIde,
-    contextSwitchData,
-    selectedDeveloper,
-  ]);
-
-  // --------------------------------------------------
-  // Data Source Summary
-  // --------------------------------------------------
-
-  const dataSourceSummary = useMemo(() => {
-    return [
-      {
-        name: "GitHub",
-        records: filteredGithub.length,
-      },
-      {
-        name: "Slack",
-        records: filteredSlack.length,
-      },
-      {
-        name: "IDE",
-        records: filteredIde.length,
-      },
-    ];
-  }, [
-    filteredGithub,
-    filteredSlack,
-    filteredIde,
-  ]);
-
-  // --------------------------------------------------
-  // KPI Calculations
-  // --------------------------------------------------
+  /*
+   * --------------------------------------------------
+   * Basic Metrics
+   * --------------------------------------------------
+   */
 
   const totalCommits = filteredGithub.filter(
     (record) => record.action === "commit"
   ).length;
 
-  const pullRequests = filteredGithub.filter(
+  const totalPullRequests = filteredGithub.filter(
     (record) => record.action === "pull_request"
   ).length;
 
-  const slackMessages = filteredSlack.length;
+  const totalSlackMessages = filteredSlack.length;
 
-  const codingMinutes = filteredIde.reduce(
-    (total, record) =>
-      total + Number(record.minutes_coding || 0),
+  const totalCodingMinutes = filteredIde.reduce(
+    (sum, record) =>
+      sum + Number(record.minutes_coding || 0),
     0
   );
 
-  const codingHours = (
-    codingMinutes / 60
+  const totalCodingHours = (
+    totalCodingMinutes / 60
   ).toFixed(1);
 
-  const activeDevelopers =
-    developerPerformanceData.length;
+  const activeDevelopers = new Set([
+    ...filteredGithub.map(
+      (record) => record.developer
+    ),
+    ...filteredSlack.map(
+      (record) => record.user
+    ),
+    ...filteredIde.map(
+      (record) => record.developer
+    ),
+  ]);
 
-  const totalContextSwitches =
-    contextSwitchData.reduce(
-      (total, item) => total + item.switches,
-      0
-    );
+  /*
+   * --------------------------------------------------
+   * Activity Timeline
+   * --------------------------------------------------
+   */
 
-  const totalLostMinutes =
-    totalContextSwitches * MINUTES_PER_SWITCH;
+  const activityTimeline = useMemo(() => {
+    const events = [];
 
-  // --------------------------------------------------
-  // Analytics Insights
-  // --------------------------------------------------
+    filteredGithub.forEach((record) => {
+      events.push({
+        time: record.timestamp,
+        source: "GitHub",
+        developer: record.developer,
+        activity: 1,
+      });
+    });
 
-  const mostActiveDeveloper = useMemo(() => {
-    if (developerPerformanceData.length === 0) {
-      return "N/A";
-    }
+    filteredSlack.forEach((record) => {
+      events.push({
+        time: record.timestamp,
+        source: "Slack",
+        developer: record.user,
+        activity: 1,
+      });
+    });
 
-    return [...developerPerformanceData].sort(
-      (a, b) => b.activity - a.activity
-    )[0].name;
-  }, [developerPerformanceData]);
+    filteredIde.forEach((record) => {
+      events.push({
+        time: record.timestamp,
+        source: "IDE",
+        developer: record.developer,
+        activity: 1,
+      });
+    });
 
-  const mostUsedDataSource = useMemo(() => {
-    const sources = [
-      {
-        name: "GitHub",
-        count: filteredGithub.length,
-      },
-      {
-        name: "Slack",
-        count: filteredSlack.length,
-      },
-      {
-        name: "IDE",
-        count: filteredIde.length,
-      },
-    ];
-
-    const sorted = sources.sort(
-      (a, b) => b.count - a.count
-    );
-
-    return sorted[0].count > 0
-      ? sorted[0].name
-      : "N/A";
+    return events
+      .sort(
+        (a, b) =>
+          new Date(a.time) -
+          new Date(b.time)
+      )
+      .map((event) => ({
+        ...event,
+        time: new Date(
+          event.time
+        ).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      }));
   }, [
     filteredGithub,
     filteredSlack,
     filteredIde,
   ]);
 
-  const flowStatus =
-    totalContextSwitches >= 3
-      ? "At Risk"
-      : totalContextSwitches >= 2
-      ? "Moderate"
-      : "Healthy";
+  /*
+   * --------------------------------------------------
+   * Developer Activity
+   * --------------------------------------------------
+   */
 
-  const cognitiveLoad =
-    totalContextSwitches >= 3
-      ? "High"
-      : totalContextSwitches >= 2
-      ? "Medium"
-      : "Low";
+  const developerActivity = useMemo(() => {
+    return developers
+      .map((developer) => {
+        const githubCount =
+          filteredGithub.filter(
+            (record) =>
+              record.developer === developer
+          ).length;
 
-  const productivityLoss =
-    codingMinutes > 0
-      ? `${(
-          (totalLostMinutes / codingMinutes) *
-          100
-        ).toFixed(1)}%`
-      : "0%";
+        const slackCount =
+          filteredSlack.filter(
+            (record) =>
+              record.user === developer
+          ).length;
 
-  // --------------------------------------------------
-  // Render
-  // --------------------------------------------------
+        const ideCount =
+          filteredIde.filter(
+            (record) =>
+              record.developer === developer
+          ).length;
+
+        return {
+          developer,
+          activity:
+            githubCount +
+            slackCount +
+            ideCount,
+        };
+      })
+      .filter(
+        (developer) =>
+          developer.activity > 0
+      );
+  }, [
+    developers,
+    filteredGithub,
+    filteredSlack,
+    filteredIde,
+  ]);
+
+  /*
+   * --------------------------------------------------
+   * Context Switching
+   * --------------------------------------------------
+   */
+
+  const contextSwitchData = useMemo(() => {
+    return developers
+      .map((developer) => {
+        const events = [];
+
+        filteredGithub.forEach((record) => {
+          if (
+            record.developer === developer
+          ) {
+            events.push({
+              source: "GitHub",
+              timestamp: record.timestamp,
+            });
+          }
+        });
+
+        filteredSlack.forEach((record) => {
+          if (record.user === developer) {
+            events.push({
+              source: "Slack",
+              timestamp: record.timestamp,
+            });
+          }
+        });
+
+        filteredIde.forEach((record) => {
+          if (
+            record.developer === developer
+          ) {
+            events.push({
+              source: "IDE",
+              timestamp: record.timestamp,
+            });
+          }
+        });
+
+        events.sort(
+          (a, b) =>
+            new Date(a.timestamp) -
+            new Date(b.timestamp)
+        );
+
+        let switches = 0;
+
+        for (let i = 1; i < events.length; i++) {
+          if (
+            events[i].source !==
+            events[i - 1].source
+          ) {
+            switches += 1;
+          }
+        }
+
+        return {
+          developer,
+          switches,
+        };
+      })
+      .filter(
+        (developer) =>
+          developer.switches > 0
+      );
+  }, [
+    developers,
+    filteredGithub,
+    filteredSlack,
+    filteredIde,
+  ]);
+
+  /*
+   * --------------------------------------------------
+   * Context Switching Tax
+   * --------------------------------------------------
+   */
+
+  const MINUTES_PER_SWITCH = 5;
+
+  const contextSwitchTax = contextSwitchData.map(
+    (developer) => ({
+      developer: developer.developer,
+      lostMinutes:
+        developer.switches *
+        MINUTES_PER_SWITCH,
+    })
+  );
+
+  const totalContextSwitches =
+    contextSwitchData.reduce(
+      (sum, developer) =>
+        sum + developer.switches,
+      0
+    );
+
+  const totalLostMinutes =
+    totalContextSwitches *
+    MINUTES_PER_SWITCH;
+
+  /*
+   * --------------------------------------------------
+   * Developer Performance
+   * --------------------------------------------------
+   */
+
+  const developerPerformanceData =
+    useMemo(() => {
+      return developers
+        .map((developer) => {
+          const activity =
+            developerActivity.find(
+              (item) =>
+                item.developer ===
+                developer
+            )?.activity || 0;
+
+          const codingMinutes =
+            filteredIde
+              .filter(
+                (record) =>
+                  record.developer ===
+                  developer
+              )
+              .reduce(
+                (sum, record) =>
+                  sum +
+                  Number(
+                    record.minutes_coding ||
+                      0
+                  ),
+                0
+              );
+
+          const switches =
+            contextSwitchData.find(
+              (item) =>
+                item.developer ===
+                developer
+            )?.switches || 0;
+
+          const lostMinutes =
+            switches *
+            MINUTES_PER_SWITCH;
+
+          let status = "Stable";
+
+          if (switches >= 3) {
+            status = "High Cognitive Load";
+          } else if (switches >= 2) {
+            status = "Moderate Cognitive Load";
+          } else if (
+            codingMinutes >= 45
+          ) {
+            status = "Strong Flow";
+          }
+
+          return {
+            name: developer,
+            activity,
+            codingMinutes,
+            switches,
+            lostMinutes,
+            status,
+          };
+        })
+        .filter(
+          (developer) =>
+            developer.activity > 0
+        );
+    }, [
+      developers,
+      developerActivity,
+      filteredIde,
+      contextSwitchData,
+    ]);
+
+  /*
+   * --------------------------------------------------
+   * Data Source Summary
+   * --------------------------------------------------
+   */
+
+  const dataSourceSummary = [
+    {
+      name: "GitHub",
+      records: filteredGithub.length,
+    },
+    {
+      name: "Slack",
+      records: filteredSlack.length,
+    },
+    {
+      name: "IDE",
+      records: filteredIde.length,
+    },
+  ];
+
+  /*
+   * --------------------------------------------------
+   * Automated Insights
+   * --------------------------------------------------
+   */
+
+  const mostActiveDeveloper =
+    developerActivity.length > 0
+      ? [...developerActivity].sort(
+          (a, b) =>
+            b.activity - a.activity
+        )[0]
+      : null;
+
+  const mostUsedSource = [
+    {
+      name: "GitHub",
+      count: filteredGithub.length,
+    },
+    {
+      name: "Slack",
+      count: filteredSlack.length,
+    },
+    {
+      name: "IDE",
+      count: filteredIde.length,
+    },
+  ].sort(
+    (a, b) => b.count - a.count
+  )[0];
+
+  let teamFlowStatus = "Healthy";
+  let teamCognitiveLoad = "Low";
+  let productivityLoss = "Low";
+
+  if (totalContextSwitches >= 6) {
+    teamCognitiveLoad = "High";
+    teamFlowStatus = "Needs Attention";
+  } else if (totalContextSwitches >= 3) {
+    teamCognitiveLoad = "Medium";
+    teamFlowStatus = "Moderate";
+  }
+
+  if (totalLostMinutes >= 30) {
+    productivityLoss = "High";
+  } else if (totalLostMinutes >= 15) {
+    productivityLoss = "Medium";
+  }
+
+  /*
+   * --------------------------------------------------
+   * UI
+   * --------------------------------------------------
+   */
 
   return (
     <div
       style={{
-        minHeight: "100vh",
-        backgroundColor: "#f8fafc",
+        maxWidth: "1400px",
+        margin: "0 auto",
         padding: "30px",
         fontFamily:
-          "Inter, Arial, sans-serif",
+          "Arial, sans-serif",
+        backgroundColor: "#f8fafc",
+        minHeight: "100vh",
       }}
     >
       {/* Header */}
 
-      <div style={{ marginBottom: "25px" }}>
+      <div
+        style={{
+          marginBottom: "25px",
+        }}
+      >
         <Title
           style={{
             fontSize: "32px",
@@ -532,7 +590,11 @@ function App() {
           CogniStream
         </Title>
 
-        <Text style={{ marginTop: "6px" }}>
+        <Text
+          style={{
+            marginTop: "6px",
+          }}
+        >
           Developer Flow-State & Cognitive Load
           Analytics
         </Text>
@@ -540,28 +602,30 @@ function App() {
 
       {/* Filters */}
 
-      <Card style={{ marginBottom: "25px" }}>
+      <Card
+        style={{
+          marginBottom: "20px",
+        }}
+      >
         <Title>Dashboard Filters</Title>
 
         <div
           style={{
             display: "grid",
             gridTemplateColumns:
-              "repeat(auto-fit, minmax(200px, 1fr))",
+              "repeat(auto-fit, minmax(220px, 1fr))",
             gap: "15px",
-            marginTop: "18px",
+            marginTop: "15px",
           }}
         >
-          {/* Developer */}
-
           <div>
             <Text>Developer</Text>
 
             <select
               value={selectedDeveloper}
-              onChange={(e) =>
+              onChange={(event) =>
                 setSelectedDeveloper(
-                  e.target.value
+                  event.target.value
                 )
               }
               style={{
@@ -578,27 +642,27 @@ function App() {
                 All Developers
               </option>
 
-              {developers.map((developer) => (
-                <option
-                  key={developer}
-                  value={developer}
-                >
-                  {developer}
-                </option>
-              ))}
+              {developers.map(
+                (developer) => (
+                  <option
+                    key={developer}
+                    value={developer}
+                  >
+                    {developer}
+                  </option>
+                )
+              )}
             </select>
           </div>
-
-          {/* Time */}
 
           <div>
             <Text>Time Range</Text>
 
             <select
               value={selectedTimeRange}
-              onChange={(e) =>
+              onChange={(event) =>
                 setSelectedTimeRange(
-                  e.target.value
+                  event.target.value
                 )
               }
               style={{
@@ -611,23 +675,32 @@ function App() {
                 backgroundColor: "white",
               }}
             >
-              <option>All Time</option>
-              <option>Morning</option>
-              <option>Afternoon</option>
-              <option>Evening</option>
+              <option>
+                All Time
+              </option>
+
+              <option>
+                Morning
+              </option>
+
+              <option>
+                Afternoon
+              </option>
+
+              <option>
+                Evening
+              </option>
             </select>
           </div>
-
-          {/* Source */}
 
           <div>
             <Text>Data Source</Text>
 
             <select
               value={selectedSource}
-              onChange={(e) =>
+              onChange={(event) =>
                 setSelectedSource(
-                  e.target.value
+                  event.target.value
                 )
               }
               style={{
@@ -640,7 +713,10 @@ function App() {
                 backgroundColor: "white",
               }}
             >
-              <option>All Sources</option>
+              <option>
+                All Sources
+              </option>
+
               <option>GitHub</option>
               <option>Slack</option>
               <option>IDE</option>
@@ -666,102 +742,138 @@ function App() {
 
         <Card>
           <Text>Pull Requests</Text>
-          <Metric>{pullRequests}</Metric>
+          <Metric>
+            {totalPullRequests}
+          </Metric>
         </Card>
 
         <Card>
           <Text>Slack Messages</Text>
-          <Metric>{slackMessages}</Metric>
+          <Metric>
+            {totalSlackMessages}
+          </Metric>
         </Card>
 
         <Card>
           <Text>IDE Coding Hours</Text>
-          <Metric>{codingHours}</Metric>
+          <Metric>
+            {totalCodingHours}
+          </Metric>
         </Card>
 
         <Card>
           <Text>Active Developers</Text>
-          <Metric>{activeDevelopers}</Metric>
+          <Metric>
+            {activeDevelopers.size}
+          </Metric>
         </Card>
 
         <Card>
           <Text>Coding Minutes</Text>
-          <Metric>{codingMinutes}</Metric>
+          <Metric>
+            {totalCodingMinutes}
+          </Metric>
         </Card>
 
         <Card>
           <Text>Context Switches</Text>
-          <Metric>{totalContextSwitches}</Metric>
+          <Metric>
+            {totalContextSwitches}
+          </Metric>
         </Card>
 
         <Card>
           <Text>Estimated Lost Minutes</Text>
-          <Metric>{totalLostMinutes}</Metric>
+          <Metric>
+            {totalLostMinutes}
+          </Metric>
         </Card>
       </div>
 
       {/* Analytics Insights */}
 
-      <Card style={{ marginTop: "25px" }}>
-        <Title>Analytics Insights</Title>
+      <Card
+        style={{
+          marginTop: "20px",
+        }}
+      >
+        <Title>
+          Automated Analytics Insights
+        </Title>
 
         <div
           style={{
             display: "grid",
             gridTemplateColumns:
-              "repeat(auto-fit, minmax(200px, 1fr))",
+              "repeat(auto-fit, minmax(220px, 1fr))",
             gap: "18px",
             marginTop: "18px",
           }}
         >
-          <div>
-            <Text>Flow Status</Text>
-            <Metric>{flowStatus}</Metric>
-          </div>
+          <Card>
+            <Text>Team Flow Status</Text>
+            <Metric>
+              {teamFlowStatus}
+            </Metric>
+          </Card>
 
-          <div>
+          <Card>
             <Text>Cognitive Load</Text>
-            <Metric>{cognitiveLoad}</Metric>
-          </div>
+            <Metric>
+              {teamCognitiveLoad}
+            </Metric>
+          </Card>
 
-          <div>
+          <Card>
             <Text>Productivity Loss</Text>
             <Metric>
               {productivityLoss}
             </Metric>
-          </div>
+          </Card>
 
-          <div>
+          <Card>
             <Text>Most Active Developer</Text>
-            <Metric
-              style={{
-                fontSize: "20px",
-              }}
-            >
-              {mostActiveDeveloper}
+            <Metric>
+              {mostActiveDeveloper
+                ? mostActiveDeveloper.developer
+                : "N/A"}
             </Metric>
-          </div>
+          </Card>
 
-          <div>
+          <Card>
             <Text>Most Used Data Source</Text>
-            <Metric>{mostUsedDataSource}</Metric>
-          </div>
+            <Metric>
+              {mostUsedSource
+                ? mostUsedSource.name
+                : "N/A"}
+            </Metric>
+          </Card>
         </div>
       </Card>
 
       {/* Data Source Overview */}
 
-      <div style={{ marginTop: "25px" }}>
-        <Title>Data Sources Overview</Title>
+      <Card
+        style={{
+          marginTop: "20px",
+        }}
+      >
+        <Title>
+          Data Sources Overview
+        </Title>
 
         <DataSourceSummary
           data={dataSourceSummary}
         />
-      </div>
+      </Card>
 
       {/* Developer Performance */}
 
-      <div style={{ marginTop: "30px" }}>
+      <Card
+        style={{
+          marginTop: "20px",
+        }}
+      >
         <Title>
           Developer Performance Summary
         </Title>
@@ -769,254 +881,486 @@ function App() {
         <DeveloperPerformance
           data={developerPerformanceData}
         />
-      </div>
+      </Card>
 
-      {/* Developer Risk Ranking */}
+      {/* Risk Ranking */}
 
       <DeveloperRiskRanking
         data={developerPerformanceData}
       />
 
+      {/* Flow Score */}
+
+      <DeveloperFlowScore
+        data={developerPerformanceData}
+      />
+
+      {/* Team Health */}
+
+      <TeamHealthOverview
+        data={developerPerformanceData}
+      />
+
       {/* Activity Timeline */}
 
-      <Card style={{ marginTop: "25px" }}>
-        <Title>Developer Activity Timeline</Title>
+      <Card
+        style={{
+          marginTop: "20px",
+        }}
+      >
+        <Title>
+          Developer Activity Timeline
+        </Title>
 
-        <Text style={{ marginTop: "6px" }}>
-          Combined activity across GitHub, Slack,
-          and IDE sources.
-        </Text>
-
-        <div style={{ marginTop: "15px" }}>
-          <ActivityChart
-            data={activityTimeline}
-          />
-        </div>
+        <ActivityChart
+          data={activityTimeline}
+        />
       </Card>
 
       {/* Activity By Developer */}
 
-      <Card style={{ marginTop: "25px" }}>
-        <Title>Activity by Developer</Title>
+      <Card
+        style={{
+          marginTop: "20px",
+        }}
+      >
+        <Title>
+          Activity by Developer
+        </Title>
 
-        <Text style={{ marginTop: "6px" }}>
-          Total activity generated by each
-          developer.
-        </Text>
-
-        <div style={{ marginTop: "15px" }}>
-          <DeveloperActivityChart
-            data={developerActivity}
-          />
-        </div>
+        <DeveloperActivityChart
+          data={developerActivity}
+        />
       </Card>
 
       {/* Context Switching */}
 
-      <Card style={{ marginTop: "25px" }}>
-        <Title>Context Switching Analysis</Title>
+      <Card
+        style={{
+          marginTop: "20px",
+        }}
+      >
+        <Title>
+          Context Switching Analysis
+        </Title>
 
-        <Text style={{ marginTop: "6px" }}>
-          Number of transitions between GitHub,
-          Slack, and IDE activity.
-        </Text>
-
-        <div style={{ marginTop: "15px" }}>
-          <ContextSwitchChart
-            data={contextSwitchData}
-          />
-        </div>
+        <ContextSwitchChart
+          data={contextSwitchData}
+        />
       </Card>
 
       {/* Context Switching Tax */}
 
-      <Card style={{ marginTop: "25px" }}>
-        <Title>Context-Switching Tax</Title>
+      <Card
+        style={{
+          marginTop: "20px",
+        }}
+      >
+        <Title>
+          Context-Switching Tax
+        </Title>
 
-        <Text style={{ marginTop: "6px" }}>
-          Estimated productivity loss based on
-          5 minutes per context switch.
+        <Text
+          style={{
+            marginTop: "6px",
+            marginBottom: "10px",
+          }}
+        >
+          Estimated productivity time lost due to
+          switching between different work contexts.
         </Text>
 
-        <div style={{ marginTop: "15px" }}>
-          <ContextSwitchTaxChart
-            data={contextSwitchTaxData}
-          />
-        </div>
+        <ContextSwitchTaxChart
+          data={contextSwitchTax}
+        />
       </Card>
 
       {/* GitHub Activity */}
 
-      <Card style={{ marginTop: "25px" }}>
+      <Card
+        style={{
+          marginTop: "20px",
+        }}
+      >
         <Title>GitHub Activity</Title>
 
-        <Text style={{ marginTop: "6px" }}>
-          GitHub commits and pull requests.
-        </Text>
-
-        <div
-          style={{
-            marginTop: "15px",
-            overflowX: "auto",
-          }}
-        >
-          {filteredGithub.length === 0 ? (
-            <Text>No GitHub activity found.</Text>
-          ) : (
-            filteredGithub.map(
-              (record, index) => (
-                <div
-                  key={`${record.timestamp}-${index}`}
-                  style={{
-                    padding: "12px",
-                    borderBottom:
-                      "1px solid #e5e7eb",
-                  }}
-                >
-                  <strong>
-                    {record.developer}
-                  </strong>{" "}
-                  — {record.action}
-                  <div
+        {filteredGithub.length === 0 ? (
+          <Text
+            style={{
+              marginTop: "10px",
+            }}
+          >
+            No GitHub activity available for
+            the selected filters.
+          </Text>
+        ) : (
+          <div
+            style={{
+              overflowX: "auto",
+              marginTop: "15px",
+            }}
+          >
+            <table
+              style={{
+                width: "100%",
+                borderCollapse:
+                  "collapse",
+              }}
+            >
+              <thead>
+                <tr>
+                  <th
                     style={{
-                      marginTop: "4px",
+                      textAlign: "left",
+                      padding: "10px",
                     }}
                   >
-                    {record.message}
-                  </div>
+                    Developer
+                  </th>
 
-                  <Text
+                  <th
                     style={{
-                      marginTop: "4px",
+                      textAlign: "left",
+                      padding: "10px",
                     }}
                   >
-                    {record.timestamp}
-                  </Text>
-                </div>
-              )
-            )
-          )}
-        </div>
+                    Repository
+                  </th>
+
+                  <th
+                    style={{
+                      textAlign: "left",
+                      padding: "10px",
+                    }}
+                  >
+                    Action
+                  </th>
+
+                  <th
+                    style={{
+                      textAlign: "left",
+                      padding: "10px",
+                    }}
+                  >
+                    Message
+                  </th>
+
+                  <th
+                    style={{
+                      textAlign: "left",
+                      padding: "10px",
+                    }}
+                  >
+                    Timestamp
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {filteredGithub.map(
+                  (record, index) => (
+                    <tr
+                      key={`${record.timestamp}-${index}`}
+                    >
+                      <td
+                        style={{
+                          padding: "10px",
+                        }}
+                      >
+                        {record.developer}
+                      </td>
+
+                      <td
+                        style={{
+                          padding: "10px",
+                        }}
+                      >
+                        {record.repo}
+                      </td>
+
+                      <td
+                        style={{
+                          padding: "10px",
+                        }}
+                      >
+                        {record.action}
+                      </td>
+
+                      <td
+                        style={{
+                          padding: "10px",
+                        }}
+                      >
+                        {record.message}
+                      </td>
+
+                      <td
+                        style={{
+                          padding: "10px",
+                        }}
+                      >
+                        {record.timestamp}
+                      </td>
+                    </tr>
+                  )
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Card>
 
       {/* Slack Activity */}
 
-      <Card style={{ marginTop: "25px" }}>
+      <Card
+        style={{
+          marginTop: "20px",
+        }}
+      >
         <Title>Slack Activity</Title>
 
-        <Text style={{ marginTop: "6px" }}>
-          Developer communication activity.
-        </Text>
-
-        <div
-          style={{
-            marginTop: "15px",
-            overflowX: "auto",
-          }}
-        >
-          {filteredSlack.length === 0 ? (
-            <Text>No Slack activity found.</Text>
-          ) : (
-            filteredSlack.map(
-              (record, index) => (
-                <div
-                  key={`${record.timestamp}-${index}`}
-                  style={{
-                    padding: "12px",
-                    borderBottom:
-                      "1px solid #e5e7eb",
-                  }}
-                >
-                  <strong>
-                    {record.user}
-                  </strong>{" "}
-                  — {record.channel}
-
-                  <div
+        {filteredSlack.length === 0 ? (
+          <Text
+            style={{
+              marginTop: "10px",
+            }}
+          >
+            No Slack activity available for
+            the selected filters.
+          </Text>
+        ) : (
+          <div
+            style={{
+              overflowX: "auto",
+              marginTop: "15px",
+            }}
+          >
+            <table
+              style={{
+                width: "100%",
+                borderCollapse:
+                  "collapse",
+              }}
+            >
+              <thead>
+                <tr>
+                  <th
                     style={{
-                      marginTop: "4px",
+                      textAlign: "left",
+                      padding: "10px",
                     }}
                   >
-                    {record.message}
-                  </div>
+                    User
+                  </th>
 
-                  <Text
+                  <th
                     style={{
-                      marginTop: "4px",
+                      textAlign: "left",
+                      padding: "10px",
                     }}
                   >
-                    {record.timestamp}
-                  </Text>
-                </div>
-              )
-            )
-          )}
-        </div>
+                    Channel
+                  </th>
+
+                  <th
+                    style={{
+                      textAlign: "left",
+                      padding: "10px",
+                    }}
+                  >
+                    Message
+                  </th>
+
+                  <th
+                    style={{
+                      textAlign: "left",
+                      padding: "10px",
+                    }}
+                  >
+                    Timestamp
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {filteredSlack.map(
+                  (record, index) => (
+                    <tr
+                      key={`${record.timestamp}-${index}`}
+                    >
+                      <td
+                        style={{
+                          padding: "10px",
+                        }}
+                      >
+                        {record.user}
+                      </td>
+
+                      <td
+                        style={{
+                          padding: "10px",
+                        }}
+                      >
+                        {record.channel}
+                      </td>
+
+                      <td
+                        style={{
+                          padding: "10px",
+                        }}
+                      >
+                        {record.message}
+                      </td>
+
+                      <td
+                        style={{
+                          padding: "10px",
+                        }}
+                      >
+                        {record.timestamp}
+                      </td>
+                    </tr>
+                  )
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Card>
 
       {/* IDE Activity */}
 
-      <Card style={{ marginTop: "25px" }}>
+      <Card
+        style={{
+          marginTop: "20px",
+        }}
+      >
         <Title>IDE Activity</Title>
 
-        <Text style={{ marginTop: "6px" }}>
-          Coding activity captured from IDE
-          telemetry.
-        </Text>
-
-        <div
-          style={{
-            marginTop: "15px",
-            overflowX: "auto",
-          }}
-        >
-          {filteredIde.length === 0 ? (
-            <Text>No IDE activity found.</Text>
-          ) : (
-            filteredIde.map(
-              (record, index) => (
-                <div
-                  key={`${record.timestamp}-${index}`}
-                  style={{
-                    padding: "12px",
-                    borderBottom:
-                      "1px solid #e5e7eb",
-                  }}
-                >
-                  <strong>
-                    {record.developer}
-                  </strong>{" "}
-                  — {record.language}
-
-                  <div
+        {filteredIde.length === 0 ? (
+          <Text
+            style={{
+              marginTop: "10px",
+            }}
+          >
+            No IDE activity available for
+            the selected filters.
+          </Text>
+        ) : (
+          <div
+            style={{
+              overflowX: "auto",
+              marginTop: "15px",
+            }}
+          >
+            <table
+              style={{
+                width: "100%",
+                borderCollapse:
+                  "collapse",
+              }}
+            >
+              <thead>
+                <tr>
+                  <th
                     style={{
-                      marginTop: "4px",
+                      textAlign: "left",
+                      padding: "10px",
                     }}
                   >
-                    File: {record.file}
-                  </div>
+                    Developer
+                  </th>
 
-                  <div
+                  <th
                     style={{
-                      marginTop: "4px",
+                      textAlign: "left",
+                      padding: "10px",
                     }}
                   >
-                    Coding Time:{" "}
-                    {record.minutes_coding} minutes
-                  </div>
+                    Language
+                  </th>
 
-                  <Text
+                  <th
                     style={{
-                      marginTop: "4px",
+                      textAlign: "left",
+                      padding: "10px",
                     }}
                   >
-                    {record.timestamp}
-                  </Text>
-                </div>
-              )
-            )
-          )}
-        </div>
+                    File
+                  </th>
+
+                  <th
+                    style={{
+                      textAlign: "left",
+                      padding: "10px",
+                    }}
+                  >
+                    Coding Minutes
+                  </th>
+
+                  <th
+                    style={{
+                      textAlign: "left",
+                      padding: "10px",
+                    }}
+                  >
+                    Timestamp
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {filteredIde.map(
+                  (record, index) => (
+                    <tr
+                      key={`${record.timestamp}-${index}`}
+                    >
+                      <td
+                        style={{
+                          padding: "10px",
+                        }}
+                      >
+                        {record.developer}
+                      </td>
+
+                      <td
+                        style={{
+                          padding: "10px",
+                        }}
+                      >
+                        {record.language}
+                      </td>
+
+                      <td
+                        style={{
+                          padding: "10px",
+                        }}
+                      >
+                        {record.file}
+                      </td>
+
+                      <td
+                        style={{
+                          padding: "10px",
+                        }}
+                      >
+                        {record.minutes_coding}
+                      </td>
+
+                      <td
+                        style={{
+                          padding: "10px",
+                        }}
+                      >
+                        {record.timestamp}
+                      </td>
+                    </tr>
+                  )
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Card>
 
       {/* Footer */}
@@ -1024,8 +1368,8 @@ function App() {
       <div
         style={{
           textAlign: "center",
-          marginTop: "35px",
-          paddingBottom: "20px",
+          marginTop: "30px",
+          padding: "20px",
         }}
       >
         <Text>
@@ -1038,3 +1382,4 @@ function App() {
 }
 
 export default App;
+
