@@ -22,8 +22,11 @@ function App() {
   const [selectedTimeRange, setSelectedTimeRange] =
     useState("All Time");
 
+  const [selectedSource, setSelectedSource] =
+    useState("All Sources");
+
   // -----------------------------
-  // Available developers
+  // Developer list
   // -----------------------------
   const developerList = useMemo(() => {
     return [
@@ -43,7 +46,7 @@ function App() {
   }, []);
 
   // -----------------------------
-  // Time filtering function
+  // Time filter
   // -----------------------------
   const filterByTime = (record) => {
     const hour = Number(
@@ -66,49 +69,58 @@ function App() {
   };
 
   // -----------------------------
-  // Filter GitHub
+  // GitHub filter
   // -----------------------------
   const filteredGithubData =
-    githubData.records.filter((record) => {
-      const developerMatch =
-        selectedDeveloper === "All Developers" ||
-        record.developer === selectedDeveloper;
+    selectedSource === "Slack" ||
+    selectedSource === "IDE"
+      ? []
+      : githubData.records.filter((record) => {
+          const developerMatch =
+            selectedDeveloper === "All Developers" ||
+            record.developer === selectedDeveloper;
 
-      return (
-        developerMatch &&
-        filterByTime(record)
-      );
-    });
+          return (
+            developerMatch &&
+            filterByTime(record)
+          );
+        });
 
   // -----------------------------
-  // Filter Slack
+  // Slack filter
   // -----------------------------
   const filteredSlackData =
-    slackData.records.filter((record) => {
-      const developerMatch =
-        selectedDeveloper === "All Developers" ||
-        record.user === selectedDeveloper;
+    selectedSource === "GitHub" ||
+    selectedSource === "IDE"
+      ? []
+      : slackData.records.filter((record) => {
+          const developerMatch =
+            selectedDeveloper === "All Developers" ||
+            record.user === selectedDeveloper;
 
-      return (
-        developerMatch &&
-        filterByTime(record)
-      );
-    });
+          return (
+            developerMatch &&
+            filterByTime(record)
+          );
+        });
 
   // -----------------------------
-  // Filter IDE
+  // IDE filter
   // -----------------------------
   const filteredIdeData =
-    ideData.records.filter((record) => {
-      const developerMatch =
-        selectedDeveloper === "All Developers" ||
-        record.developer === selectedDeveloper;
+    selectedSource === "GitHub" ||
+    selectedSource === "Slack"
+      ? []
+      : ideData.records.filter((record) => {
+          const developerMatch =
+            selectedDeveloper === "All Developers" ||
+            record.developer === selectedDeveloper;
 
-      return (
-        developerMatch &&
-        filterByTime(record)
-      );
-    });
+          return (
+            developerMatch &&
+            filterByTime(record)
+          );
+        });
 
   // -----------------------------
   // Activity timeline
@@ -161,7 +173,7 @@ function App() {
     );
 
   // -----------------------------
-  // Context switching
+  // Combined events
   // -----------------------------
   const allEvents = [
     ...filteredGithubData.map((record) => ({
@@ -183,6 +195,9 @@ function App() {
     })),
   ];
 
+  // -----------------------------
+  // Events by developer
+  // -----------------------------
   const eventsByDeveloper = {};
 
   allEvents.forEach((event) => {
@@ -193,6 +208,9 @@ function App() {
     eventsByDeveloper[event.developer].push(event);
   });
 
+  // -----------------------------
+  // Context switching
+  // -----------------------------
   const contextSwitchData =
     Object.entries(eventsByDeveloper).map(
       ([developer, events]) => {
@@ -434,7 +452,7 @@ function App() {
               marginTop: "18px",
             }}
           >
-            {/* Developer filter */}
+            {/* Developer */}
             <div>
               <Text>
                 <strong>
@@ -475,7 +493,7 @@ function App() {
               </select>
             </div>
 
-            {/* Time filter */}
+            {/* Time */}
             <div>
               <Text>
                 <strong>
@@ -520,6 +538,52 @@ function App() {
                 </option>
               </select>
             </div>
+
+            {/* Source */}
+            <div>
+              <Text>
+                <strong>
+                  Data Source
+                </strong>
+              </Text>
+
+              <select
+                value={selectedSource}
+                onChange={(event) =>
+                  setSelectedSource(
+                    event.target.value
+                  )
+                }
+                style={{
+                  marginTop: "8px",
+                  width: "250px",
+                  padding: "11px",
+                  borderRadius: "8px",
+                  border:
+                    "1px solid #d1d5db",
+                  background:
+                    "#ffffff",
+                  fontSize: "15px",
+                  cursor: "pointer",
+                }}
+              >
+                <option value="All Sources">
+                  All Sources
+                </option>
+
+                <option value="GitHub">
+                  GitHub
+                </option>
+
+                <option value="Slack">
+                  Slack
+                </option>
+
+                <option value="IDE">
+                  IDE
+                </option>
+              </select>
+            </div>
           </div>
 
           <Text
@@ -536,6 +600,10 @@ function App() {
             <strong>
               {selectedTimeRange}
             </strong>
+            {" | "}
+            <strong>
+              {selectedSource}
+            </strong>
           </Text>
         </div>
 
@@ -550,63 +618,47 @@ function App() {
           }}
         >
           <Card>
-            <Text>
-              Total Commits
-            </Text>
-            <Metric>
-              {totalCommits}
-            </Metric>
+            <Text>Total Commits</Text>
+            <Metric>{totalCommits}</Metric>
           </Card>
 
           <Card>
-            <Text>
-              Pull Requests
-            </Text>
+            <Text>Pull Requests</Text>
             <Metric>
               {totalPullRequests}
             </Metric>
           </Card>
 
           <Card>
-            <Text>
-              Slack Messages
-            </Text>
+            <Text>Slack Messages</Text>
             <Metric>
               {totalSlackMessages}
             </Metric>
           </Card>
 
           <Card>
-            <Text>
-              IDE Coding Hours
-            </Text>
+            <Text>IDE Coding Hours</Text>
             <Metric>
               {totalCodingHours}
             </Metric>
           </Card>
 
           <Card>
-            <Text>
-              Active Developers
-            </Text>
+            <Text>Active Developers</Text>
             <Metric>
               {activeDevelopers}
             </Metric>
           </Card>
 
           <Card>
-            <Text>
-              Coding Minutes
-            </Text>
+            <Text>Coding Minutes</Text>
             <Metric>
               {totalCodingMinutes}
             </Metric>
           </Card>
 
           <Card>
-            <Text>
-              Context Switches
-            </Text>
+            <Text>Context Switches</Text>
             <Metric>
               {totalContextSwitches}
             </Metric>
@@ -701,7 +753,7 @@ function App() {
           </Card>
         </div>
 
-        {/* Developer Activity */}
+        {/* Activity by Developer */}
         <div
           style={{
             marginBottom: "28px",
