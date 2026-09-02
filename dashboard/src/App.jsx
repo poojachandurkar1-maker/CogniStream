@@ -388,6 +388,74 @@ function App() {
     },
   ];
 
+  // =====================================================
+  // STEP 20 — ANALYTICS INSIGHTS
+  // =====================================================
+
+  // Flow status
+  let flowStatus = "Healthy Flow";
+  let flowDescription =
+    "Developers are experiencing relatively low context switching.";
+
+  if (totalContextSwitches >= 6) {
+    flowStatus = "High Cognitive Load";
+    flowDescription =
+      "Frequent context switching may indicate significant workflow disruption.";
+  } else if (totalContextSwitches >= 3) {
+    flowStatus = "Moderate Risk";
+    flowDescription =
+      "Context switching is increasing and may affect developer focus.";
+  }
+
+  // Cognitive load level
+  let cognitiveLoad = "Low";
+
+  if (totalContextSwitches >= 6) {
+    cognitiveLoad = "High";
+  } else if (totalContextSwitches >= 3) {
+    cognitiveLoad = "Medium";
+  }
+
+  // Most active developer
+  let mostActiveDeveloper = "No activity";
+
+  if (developerActivityData.length > 0) {
+    const mostActive =
+      [...developerActivityData].sort(
+        (a, b) =>
+          b.activity - a.activity
+      )[0];
+
+    mostActiveDeveloper =
+      `${mostActive.developer} (${mostActive.activity} activities)`;
+  }
+
+  // Most used source
+  const sourceCounts = {
+    GitHub: filteredGithubData.length,
+    Slack: filteredSlackData.length,
+    IDE: filteredIdeData.length,
+  };
+
+  let mostUsedSource = "No activity";
+
+  const sourceEntries =
+    Object.entries(sourceCounts);
+
+  if (
+    sourceEntries.some(
+      ([, count]) => count > 0
+    )
+  ) {
+    const topSource =
+      sourceEntries.sort(
+        (a, b) => b[1] - a[1]
+      )[0];
+
+    mostUsedSource =
+      `${topSource[0]} (${topSource[1]} records)`;
+  }
+
   return (
     <main
       style={{
@@ -671,6 +739,133 @@ function App() {
             <Metric>
               {totalLostMinutes}
             </Metric>
+          </Card>
+        </div>
+
+        {/* ================================================= */}
+        {/* STEP 20 — ANALYTICS INSIGHTS */}
+        {/* ================================================= */}
+
+        <div
+          style={{
+            marginBottom: "30px",
+          }}
+        >
+          <Card>
+            <Title>
+              Analytics Insights
+            </Title>
+
+            <Text>
+              Automated insights generated
+              from developer activity and
+              context-switching patterns.
+            </Text>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "repeat(auto-fit, minmax(220px, 1fr))",
+                gap: "18px",
+                marginTop: "20px",
+              }}
+            >
+              <Card>
+                <Text>
+                  Flow Status
+                </Text>
+
+                <Metric>
+                  {flowStatus}
+                </Metric>
+
+                <Text
+                  style={{
+                    marginTop: "10px",
+                  }}
+                >
+                  {flowDescription}
+                </Text>
+              </Card>
+
+              <Card>
+                <Text>
+                  Cognitive Load
+                </Text>
+
+                <Metric>
+                  {cognitiveLoad}
+                </Metric>
+
+                <Text
+                  style={{
+                    marginTop: "10px",
+                  }}
+                >
+                  Based on observed
+                  context-switching
+                  frequency.
+                </Text>
+              </Card>
+
+              <Card>
+                <Text>
+                  Productivity Loss
+                </Text>
+
+                <Metric>
+                  {totalLostMinutes} min
+                </Metric>
+
+                <Text
+                  style={{
+                    marginTop: "10px",
+                  }}
+                >
+                  Estimated time affected
+                  by context switching.
+                </Text>
+              </Card>
+
+              <Card>
+                <Text>
+                  Most Active Developer
+                </Text>
+
+                <Metric>
+                  {mostActiveDeveloper}
+                </Metric>
+
+                <Text
+                  style={{
+                    marginTop: "10px",
+                  }}
+                >
+                  Highest activity volume
+                  in the selected filters.
+                </Text>
+              </Card>
+
+              <Card>
+                <Text>
+                  Most Used Data Source
+                </Text>
+
+                <Metric>
+                  {mostUsedSource}
+                </Metric>
+
+                <Text
+                  style={{
+                    marginTop: "10px",
+                  }}
+                >
+                  Source contributing the
+                  most activity records.
+                </Text>
+              </Card>
+            </div>
           </Card>
         </div>
 
