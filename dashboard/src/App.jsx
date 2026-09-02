@@ -10,7 +10,9 @@ import ContextSwitchChart from "./ContextSwitchChart";
 import ContextSwitchTaxChart from "./ContextSwitchTaxChart";
 
 function App() {
-  // Combined activity timeline
+  // -----------------------------
+  // Activity timeline
+  // -----------------------------
   const activityData = [
     ...githubData.records.map((record) => ({
       time: record.timestamp.substring(11, 16),
@@ -26,31 +28,24 @@ function App() {
     })),
   ].sort((a, b) => a.time.localeCompare(b.time));
 
-  // Developer activity breakdown
+  // -----------------------------
+  // Developer activity
+  // -----------------------------
   const developerActivity = {};
 
   githubData.records.forEach((record) => {
-    if (!developerActivity[record.developer]) {
-      developerActivity[record.developer] = 0;
-    }
-
-    developerActivity[record.developer] += 1;
+    developerActivity[record.developer] =
+      (developerActivity[record.developer] || 0) + 1;
   });
 
   slackData.records.forEach((record) => {
-    if (!developerActivity[record.user]) {
-      developerActivity[record.user] = 0;
-    }
-
-    developerActivity[record.user] += 1;
+    developerActivity[record.user] =
+      (developerActivity[record.user] || 0) + 1;
   });
 
   ideData.records.forEach((record) => {
-    if (!developerActivity[record.developer]) {
-      developerActivity[record.developer] = 0;
-    }
-
-    developerActivity[record.developer] += 1;
+    developerActivity[record.developer] =
+      (developerActivity[record.developer] || 0) + 1;
   });
 
   const developerActivityData = Object.entries(developerActivity).map(
@@ -60,7 +55,9 @@ function App() {
     })
   );
 
-  // Context switching analysis
+  // -----------------------------
+  // Context switching
+  // -----------------------------
   const allEvents = [
     ...githubData.records.map((record) => ({
       developer: record.developer,
@@ -110,8 +107,9 @@ function App() {
     }
   );
 
+  // -----------------------------
   // Context-switching tax
-  // Current project assumption: 5 minutes estimated loss per context switch
+  // -----------------------------
   const MINUTES_PER_SWITCH = 5;
 
   const contextSwitchTaxData = contextSwitchData.map((record) => ({
@@ -120,12 +118,16 @@ function App() {
     lostMinutes: record.switches * MINUTES_PER_SWITCH,
   }));
 
+  // -----------------------------
+  // KPI calculations
+  // -----------------------------
   const totalContextSwitches = contextSwitchData.reduce(
     (total, record) => total + record.switches,
     0
   );
 
-  const totalLostMinutes = totalContextSwitches * MINUTES_PER_SWITCH;
+  const totalLostMinutes =
+    totalContextSwitches * MINUTES_PER_SWITCH;
 
   const totalCommits = githubData.records.filter(
     (record) => record.action === "commit"
@@ -153,196 +155,231 @@ function App() {
   return (
     <main
       style={{
-        padding: "40px",
-        maxWidth: "1200px",
-        margin: "0 auto",
+        minHeight: "100vh",
+        background: "#f8fafc",
+        padding: "32px",
         fontFamily: "Arial, sans-serif",
       }}
     >
-      <Title>CogniStream</Title>
-
-      <Text>
-        Developer Flow-State &amp; Cognitive Load Analytics
-      </Text>
-
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
-          gap: "20px",
-          marginTop: "30px",
+          maxWidth: "1250px",
+          margin: "0 auto",
         }}
       >
-        <Card>
-          <Text>Total Commits</Text>
-          <Metric>{totalCommits}</Metric>
-        </Card>
-
-        <Card>
-          <Text>Pull Requests</Text>
-          <Metric>{totalPullRequests}</Metric>
-        </Card>
-
-        <Card>
-          <Text>Slack Messages</Text>
-          <Metric>{totalSlackMessages}</Metric>
-        </Card>
-
-        <Card>
-          <Text>IDE Coding Hours</Text>
-          <Metric>{totalCodingHours}</Metric>
-        </Card>
-
-        <Card>
-          <Text>Active Developers</Text>
-          <Metric>{developers}</Metric>
-        </Card>
-
-        <Card>
-          <Text>Total Coding Minutes</Text>
-          <Metric>{totalCodingMinutes}</Metric>
-        </Card>
-
-        <Card>
-          <Text>Context Switches</Text>
-          <Metric>{totalContextSwitches}</Metric>
-        </Card>
-
-        <Card>
-          <Text>Estimated Lost Minutes</Text>
-          <Metric>{totalLostMinutes}</Metric>
-        </Card>
-      </div>
-
-      <div style={{ marginTop: "40px" }}>
-        <Card>
-          <Title>Developer Activity</Title>
+        {/* Header */}
+        <div
+          style={{
+            background: "#ffffff",
+            padding: "28px",
+            borderRadius: "16px",
+            border: "1px solid #e5e7eb",
+            marginBottom: "28px",
+          }}
+        >
+          <Title>CogniStream</Title>
 
           <Text>
-            Activity timeline from GitHub, Slack, and IDE ingestion data
+            Developer Flow-State & Cognitive Load Analytics
           </Text>
-
-          <div style={{ marginTop: "20px" }}>
-            <ActivityChart data={activityData} />
-          </div>
-        </Card>
-      </div>
-
-      <div style={{ marginTop: "40px" }}>
-        <Card>
-          <Title>Activity by Developer</Title>
 
           <Text>
-            Combined GitHub, Slack, and IDE activity for each developer
+            Unified analytics from GitHub, Slack, and IDE activity.
           </Text>
+        </div>
 
-          <div style={{ marginTop: "20px" }}>
-            <DeveloperActivityChart data={developerActivityData} />
-          </div>
-        </Card>
-      </div>
+        {/* KPI Cards */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: "18px",
+            marginBottom: "30px",
+          }}
+        >
+          <Card>
+            <Text>Total Commits</Text>
+            <Metric>{totalCommits}</Metric>
+          </Card>
 
-      <div style={{ marginTop: "40px" }}>
-        <Card>
-          <Title>Context Switching Analysis</Title>
+          <Card>
+            <Text>Pull Requests</Text>
+            <Metric>{totalPullRequests}</Metric>
+          </Card>
 
-          <Text>
-            Number of times developers switched between GitHub, Slack, and IDE
-            activity
-          </Text>
+          <Card>
+            <Text>Slack Messages</Text>
+            <Metric>{totalSlackMessages}</Metric>
+          </Card>
 
-          <div style={{ marginTop: "20px" }}>
-            <ContextSwitchChart data={contextSwitchData} />
-          </div>
-        </Card>
-      </div>
+          <Card>
+            <Text>IDE Coding Hours</Text>
+            <Metric>{totalCodingHours}</Metric>
+          </Card>
 
-      <div style={{ marginTop: "40px" }}>
-        <Card>
-          <Title>Context-Switching Tax</Title>
+          <Card>
+            <Text>Active Developers</Text>
+            <Metric>{developers}</Metric>
+          </Card>
 
-          <Text>
-            Estimated time impact using 5 minutes of loss per context switch
-          </Text>
+          <Card>
+            <Text>Coding Minutes</Text>
+            <Metric>{totalCodingMinutes}</Metric>
+          </Card>
 
-          <div style={{ marginTop: "20px" }}>
-            <ContextSwitchTaxChart data={contextSwitchTaxData} />
-          </div>
-        </Card>
-      </div>
+          <Card>
+            <Text>Context Switches</Text>
+            <Metric>{totalContextSwitches}</Metric>
+          </Card>
 
-      <div style={{ marginTop: "40px" }}>
-        <Card>
-          <Title>GitHub Activity</Title>
+          <Card>
+            <Text>Estimated Lost Minutes</Text>
+            <Metric>{totalLostMinutes}</Metric>
+          </Card>
+        </div>
 
-          {githubData.records.map((record, index) => (
-            <div
-              key={index}
-              style={{
-                padding: "15px 0",
-                borderBottom: "1px solid #e5e7eb",
-              }}
-            >
-              <Text>
-                <strong>{record.developer}</strong> — {record.action}
-              </Text>
+        {/* Activity Timeline */}
+        <div style={{ marginBottom: "28px" }}>
+          <Card>
+            <Title>Developer Activity Timeline</Title>
 
-              <Text>{record.message}</Text>
+            <Text>
+              Combined activity across GitHub, Slack, and IDE systems.
+            </Text>
 
-              <Text>{record.timestamp}</Text>
+            <div style={{ marginTop: "20px" }}>
+              <ActivityChart data={activityData} />
             </div>
-          ))}
-        </Card>
-      </div>
+          </Card>
+        </div>
 
-      <div style={{ marginTop: "20px" }}>
-        <Card>
-          <Title>Slack Activity</Title>
+        {/* Developer Activity */}
+        <div style={{ marginBottom: "28px" }}>
+          <Card>
+            <Title>Activity by Developer</Title>
 
-          {slackData.records.map((record, index) => (
-            <div
-              key={index}
-              style={{
-                padding: "15px 0",
-                borderBottom: "1px solid #e5e7eb",
-              }}
-            >
-              <Text>
-                <strong>{record.user}</strong> — {record.channel}
-              </Text>
+            <Text>
+              Overall activity volume for each developer.
+            </Text>
 
-              <Text>{record.message}</Text>
-
-              <Text>{record.timestamp}</Text>
+            <div style={{ marginTop: "20px" }}>
+              <DeveloperActivityChart
+                data={developerActivityData}
+              />
             </div>
-          ))}
-        </Card>
-      </div>
+          </Card>
+        </div>
 
-      <div style={{ marginTop: "20px" }}>
-        <Card>
-          <Title>IDE Activity</Title>
+        {/* Context Switching */}
+        <div style={{ marginBottom: "28px" }}>
+          <Card>
+            <Title>Context Switching Analysis</Title>
 
-          {ideData.records.map((record, index) => (
-            <div
-              key={index}
-              style={{
-                padding: "15px 0",
-                borderBottom: "1px solid #e5e7eb",
-              }}
-            >
-              <Text>
-                <strong>{record.developer}</strong> — {record.language}
-              </Text>
+            <Text>
+              Number of transitions between GitHub, Slack, and IDE activity.
+            </Text>
 
-              <Text>
-                {record.file} — {record.minutes_coding} minutes
-              </Text>
-
-              <Text>{record.timestamp}</Text>
+            <div style={{ marginTop: "20px" }}>
+              <ContextSwitchChart data={contextSwitchData} />
             </div>
-          ))}
-        </Card>
+          </Card>
+        </div>
+
+        {/* Context Switching Tax */}
+        <div style={{ marginBottom: "28px" }}>
+          <Card>
+            <Title>Context-Switching Tax</Title>
+
+            <Text>
+              Estimated productivity time lost using 5 minutes per context switch.
+            </Text>
+
+            <div style={{ marginTop: "20px" }}>
+              <ContextSwitchTaxChart
+                data={contextSwitchTaxData}
+              />
+            </div>
+          </Card>
+        </div>
+
+        {/* GitHub */}
+        <div style={{ marginBottom: "20px" }}>
+          <Card>
+            <Title>GitHub Activity</Title>
+
+            {githubData.records.map((record, index) => (
+              <div
+                key={index}
+                style={{
+                  padding: "16px 0",
+                  borderBottom: "1px solid #e5e7eb",
+                }}
+              >
+                <Text>
+                  <strong>{record.developer}</strong> —{" "}
+                  {record.action}
+                </Text>
+
+                <Text>{record.message}</Text>
+
+                <Text>{record.timestamp}</Text>
+              </div>
+            ))}
+          </Card>
+        </div>
+
+        {/* Slack */}
+        <div style={{ marginBottom: "20px" }}>
+          <Card>
+            <Title>Slack Activity</Title>
+
+            {slackData.records.map((record, index) => (
+              <div
+                key={index}
+                style={{
+                  padding: "16px 0",
+                  borderBottom: "1px solid #e5e7eb",
+                }}
+              >
+                <Text>
+                  <strong>{record.user}</strong> — {record.channel}
+                </Text>
+
+                <Text>{record.message}</Text>
+
+                <Text>{record.timestamp}</Text>
+              </div>
+            ))}
+          </Card>
+        </div>
+
+        {/* IDE */}
+        <div>
+          <Card>
+            <Title>IDE Activity</Title>
+
+            {ideData.records.map((record, index) => (
+              <div
+                key={index}
+                style={{
+                  padding: "16px 0",
+                  borderBottom: "1px solid #e5e7eb",
+                }}
+              >
+                <Text>
+                  <strong>{record.developer}</strong> —{" "}
+                  {record.language}
+                </Text>
+
+                <Text>
+                  {record.file} — {record.minutes_coding} minutes
+                </Text>
+
+                <Text>{record.timestamp}</Text>
+              </div>
+            ))}
+          </Card>
+        </div>
       </div>
     </main>
   );
