@@ -1,18 +1,34 @@
 # CogniStream
 
-CogniStream is a developer productivity analytics platform designed to combine activity data from GitHub, Slack, and IDE environments.
+# CogniStream
 
-## Week 1
+CogniStream is a Developer Flow-State & Cognitive Load Analytics platform.
 
-The first week focuses on building the data ingestion foundation.
+The project collects developer activity from multiple sources and prepares the data for productivity and engineering analytics.
+
+## Problem
+
+Traditional developer productivity metrics often focus only on:
+
+- Number of commits
+- Lines of code
+- Number of tasks completed
+
+These metrics do not fully represent developer focus, context switching, or working patterns.
+
+CogniStream aims to provide a more meaningful view of developer activity.
+
+## Week 1 - Data Ingestion
+
+Week 1 focuses on building the initial data ingestion layer.
 
 ### Data Sources
 
 - GitHub
 - Slack
-- IDE
+- IDE Activity
 
-### Technologies
+### Technology
 
 - Python
 - Apache Airflow
@@ -20,13 +36,16 @@ The first week focuses on building the data ingestion foundation.
 - GitHub
 - JSON
 
-### Current Pipeline
+## Data Flow
 
-GitHub ──┐
-         │
-Slack ───┼──> Python Extractors ──> Raw Data
-         │
-IDE ─────┘
+```text
+GitHub ──────┐
+             │
+Slack ───────┼──> Python Extractors ──> Raw JSON
+             │
+IDE ─────────┘
+
+
 
 Airflow orchestrates the daily extraction process.
 
