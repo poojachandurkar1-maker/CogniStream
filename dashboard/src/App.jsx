@@ -7,6 +7,7 @@ import ideData from "./data/ide_activity.json";
 import ActivityChart from "./ActivityChart";
 import DeveloperActivityChart from "./DeveloperActivityChart";
 import ContextSwitchChart from "./ContextSwitchChart";
+import ContextSwitchTaxChart from "./ContextSwitchTaxChart";
 
 function App() {
   // Combined activity timeline
@@ -109,6 +110,23 @@ function App() {
     }
   );
 
+  // Context-switching tax
+  // Current project assumption: 5 minutes estimated loss per context switch
+  const MINUTES_PER_SWITCH = 5;
+
+  const contextSwitchTaxData = contextSwitchData.map((record) => ({
+    developer: record.developer,
+    switches: record.switches,
+    lostMinutes: record.switches * MINUTES_PER_SWITCH,
+  }));
+
+  const totalContextSwitches = contextSwitchData.reduce(
+    (total, record) => total + record.switches,
+    0
+  );
+
+  const totalLostMinutes = totalContextSwitches * MINUTES_PER_SWITCH;
+
   const totalCommits = githubData.records.filter(
     (record) => record.action === "commit"
   ).length;
@@ -184,6 +202,16 @@ function App() {
           <Text>Total Coding Minutes</Text>
           <Metric>{totalCodingMinutes}</Metric>
         </Card>
+
+        <Card>
+          <Text>Context Switches</Text>
+          <Metric>{totalContextSwitches}</Metric>
+        </Card>
+
+        <Card>
+          <Text>Estimated Lost Minutes</Text>
+          <Metric>{totalLostMinutes}</Metric>
+        </Card>
       </div>
 
       <div style={{ marginTop: "40px" }}>
@@ -225,6 +253,20 @@ function App() {
 
           <div style={{ marginTop: "20px" }}>
             <ContextSwitchChart data={contextSwitchData} />
+          </div>
+        </Card>
+      </div>
+
+      <div style={{ marginTop: "40px" }}>
+        <Card>
+          <Title>Context-Switching Tax</Title>
+
+          <Text>
+            Estimated time impact using 5 minutes of loss per context switch
+          </Text>
+
+          <div style={{ marginTop: "20px" }}>
+            <ContextSwitchTaxChart data={contextSwitchTaxData} />
           </div>
         </Card>
       </div>
