@@ -26,20 +26,29 @@ MOCK_SLACK_DATA = [
 
 
 def extract_slack_data():
-    os.makedirs("data/raw", exist_ok=True)
+    output_directory = "data/raw"
+    os.makedirs(output_directory, exist_ok=True)
 
-    output_file = "data/raw/slack_activity.json"
+    output_file = os.path.join(
+        output_directory,
+        "slack_activity.json"
+    )
 
     result = {
         "source": "slack_mock",
         "extracted_at": datetime.now().isoformat(),
+        "record_count": len(MOCK_SLACK_DATA),
         "records": MOCK_SLACK_DATA
     }
 
     with open(output_file, "w", encoding="utf-8") as file:
         json.dump(result, file, indent=4)
 
-    print(f"Slack data extracted successfully: {output_file}")
+    print(
+        f"Slack extraction completed: "
+        f"{len(MOCK_SLACK_DATA)} records"
+    )
+    print(f"Output: {output_file}")
 
 
 if __name__ == "__main__":
