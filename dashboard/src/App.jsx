@@ -8,6 +8,7 @@ import ActivityChart from "./ActivityChart";
 import DeveloperActivityChart from "./DeveloperActivityChart";
 import ContextSwitchChart from "./ContextSwitchChart";
 import ContextSwitchTaxChart from "./ContextSwitchTaxChart";
+import DeveloperPerformance from "./DeveloperPerformance";
 
 function App() {
   // -----------------------------
@@ -152,6 +153,50 @@ function App() {
     ...ideData.records.map((record) => record.developer),
   ]).size;
 
+  // -----------------------------
+  // Developer performance summary
+  // -----------------------------
+  const developerPerformanceData = Object.keys(developerActivity).map(
+    (developer) => {
+      const activity = developerActivity[developer];
+
+      const codingMinutes = ideData.records
+        .filter((record) => record.developer === developer)
+        .reduce(
+          (total, record) => total + record.minutes_coding,
+          0
+        );
+
+      const switchRecord = contextSwitchData.find(
+        (record) => record.developer === developer
+      );
+
+      const switches = switchRecord
+        ? switchRecord.switches
+        : 0;
+
+      const lostMinutes =
+        switches * MINUTES_PER_SWITCH;
+
+      let status = "Stable";
+
+      if (switches >= 3) {
+        status = "High Context Switching";
+      } else if (switches >= 2) {
+        status = "Moderate Context Switching";
+      }
+
+      return {
+        name: developer,
+        activity,
+        codingMinutes,
+        switches,
+        lostMinutes,
+        status,
+      };
+    }
+  );
+
   return (
     <main
       style={{
@@ -180,7 +225,7 @@ function App() {
           <Title>CogniStream</Title>
 
           <Text>
-            Developer Flow-State & Cognitive Load Analytics
+            Developer Flow-State &amp; Cognitive Load Analytics
           </Text>
 
           <Text>
@@ -192,7 +237,8 @@ function App() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(200px, 1fr))",
             gap: "18px",
             marginBottom: "30px",
           }}
@@ -238,13 +284,30 @@ function App() {
           </Card>
         </div>
 
+        {/* Developer Performance */}
+        <div style={{ marginBottom: "28px" }}>
+          <Card>
+            <Title>Developer Performance Summary</Title>
+
+            <Text>
+              Developer-level activity, coding time, and
+              context-switching impact.
+            </Text>
+
+            <DeveloperPerformance
+              data={developerPerformanceData}
+            />
+          </Card>
+        </div>
+
         {/* Activity Timeline */}
         <div style={{ marginBottom: "28px" }}>
           <Card>
             <Title>Developer Activity Timeline</Title>
 
             <Text>
-              Combined activity across GitHub, Slack, and IDE systems.
+              Combined activity across GitHub, Slack, and IDE
+              systems.
             </Text>
 
             <div style={{ marginTop: "20px" }}>
@@ -276,11 +339,14 @@ function App() {
             <Title>Context Switching Analysis</Title>
 
             <Text>
-              Number of transitions between GitHub, Slack, and IDE activity.
+              Number of transitions between GitHub, Slack, and
+              IDE activity.
             </Text>
 
             <div style={{ marginTop: "20px" }}>
-              <ContextSwitchChart data={contextSwitchData} />
+              <ContextSwitchChart
+                data={contextSwitchData}
+              />
             </div>
           </Card>
         </div>
@@ -291,7 +357,8 @@ function App() {
             <Title>Context-Switching Tax</Title>
 
             <Text>
-              Estimated productivity time lost using 5 minutes per context switch.
+              Estimated productivity time lost using 5 minutes
+              per context switch.
             </Text>
 
             <div style={{ marginTop: "20px" }}>
@@ -302,7 +369,7 @@ function App() {
           </Card>
         </div>
 
-        {/* GitHub */}
+        {/* GitHub Activity */}
         <div style={{ marginBottom: "20px" }}>
           <Card>
             <Title>GitHub Activity</Title>
@@ -312,7 +379,8 @@ function App() {
                 key={index}
                 style={{
                   padding: "16px 0",
-                  borderBottom: "1px solid #e5e7eb",
+                  borderBottom:
+                    "1px solid #e5e7eb",
                 }}
               >
                 <Text>
@@ -328,7 +396,7 @@ function App() {
           </Card>
         </div>
 
-        {/* Slack */}
+        {/* Slack Activity */}
         <div style={{ marginBottom: "20px" }}>
           <Card>
             <Title>Slack Activity</Title>
@@ -338,11 +406,13 @@ function App() {
                 key={index}
                 style={{
                   padding: "16px 0",
-                  borderBottom: "1px solid #e5e7eb",
+                  borderBottom:
+                    "1px solid #e5e7eb",
                 }}
               >
                 <Text>
-                  <strong>{record.user}</strong> — {record.channel}
+                  <strong>{record.user}</strong> —{" "}
+                  {record.channel}
                 </Text>
 
                 <Text>{record.message}</Text>
@@ -353,7 +423,7 @@ function App() {
           </Card>
         </div>
 
-        {/* IDE */}
+        {/* IDE Activity */}
         <div>
           <Card>
             <Title>IDE Activity</Title>
@@ -363,7 +433,8 @@ function App() {
                 key={index}
                 style={{
                   padding: "16px 0",
-                  borderBottom: "1px solid #e5e7eb",
+                  borderBottom:
+                    "1px solid #e5e7eb",
                 }}
               >
                 <Text>
@@ -372,7 +443,8 @@ function App() {
                 </Text>
 
                 <Text>
-                  {record.file} — {record.minutes_coding} minutes
+                  {record.file} —{" "}
+                  {record.minutes_coding} minutes
                 </Text>
 
                 <Text>{record.timestamp}</Text>
