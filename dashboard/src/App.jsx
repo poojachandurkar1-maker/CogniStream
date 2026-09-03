@@ -1,5 +1,4 @@
-
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, Metric, Text, Title } from "@tremor/react";
 
 import ActivityChart from "./ActivityChart";
@@ -12,11 +11,13 @@ import DeveloperRiskRanking from "./DeveloperRiskRanking";
 import DeveloperFlowScore from "./DeveloperFlowScore";
 import TeamHealthOverview from "./TeamHealthOverview";
 
-import githubData from "./data/github_activity.json";
-import slackData from "./data/slack_activity.json";
-import ideData from "./data/ide_activity.json";
+const API_BASE_URL = "http://localhost:8000";
 
 function App() {
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState("");
+
   const [selectedDeveloper, setSelectedDeveloper] =
     useState("All Developers");
 
@@ -28,33 +29,58 @@ function App() {
 
   /*
    * --------------------------------------------------
+   * Load data from FastAPI
+   * --------------------------------------------------
+   */
+
+  useEffect(() => {
+    const loadEvents = async () => {
+      try {
+        setLoading(true);
+        setApiError("");
+
+        const response = await fetch(
+          `${API_BASE_URL}/events`
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            `API returned ${response.status}`
+          );
+        }
+
+        const data = await response.json();
+
+        setEvents(data);
+      } catch (error) {
+        console.error("Failed to load API data:", error);
+
+        setApiError(
+          "Unable to connect to the CogniStream API. Make sure FastAPI is running on port 8000."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadEvents();
+  }, []);
+
+  /*
+   * --------------------------------------------------
    * Developer List
    * --------------------------------------------------
    */
 
   const developers = useMemo(() => {
-    const names = new Set();
-
-    githubData.records.forEach((record) => {
-      if (record.developer) {
-        names.add(record.developer);
-      }
-    });
-
-    slackData.records.forEach((record) => {
-      if (record.user) {
-        names.add(record.user);
-      }
-    });
-
-    ideData.records.forEach((record) => {
-      if (record.developer) {
-        names.add(record.developer);
-      }
-    });
-
-    return Array.from(names).sort();
-  }, []);
+    return Array.from(
+      new Set(
+        events
+          .map((event) => event.developer)
+          .filter(Boolean)
+      )
+    ).sort();
+  }, [events]);
 
   /*
    * --------------------------------------------------
@@ -86,84 +112,87 @@ function App() {
 
   /*
    * --------------------------------------------------
-   * Filtered Source Data
+   * Filtered Unified Events
+   * --------------------------------------------------
+   */
+
+  const filteredEvents = useMemo(() => {
+    return events.filter((event) => {
+      const developerMatch =
+        selectedDeveloper === "All Developers" ||
+        event.developer === selectedDeveloper;
+
+      const eventSource = event.source
+        ? event.source.toLowerCase()
+        : "";
+
+      const sourceMatch =
+        selectedSource === "All Sources" ||
+        eventSource === selectedSource.toLowerCase();
+
+      const timeMatch = isWithinTimeRange(
+        event.event_time
+      );
+
+      return (
+        developerMatch &&
+        sourceMatch &&
+        timeMatch
+      );
+    });
+  }, [
+    events,
+    selectedDeveloper,
+    selectedSource,
+    selectedTimeRange,
+  ]);
+
+  /*
+   * --------------------------------------------------
+   * Convert ClickHouse events into UI-specific data
    * --------------------------------------------------
    */
 
   const filteredGithub = useMemo(() => {
-    if (
-      selectedSource !== "All Sources" &&
-      selectedSource !== "GitHub"
-    ) {
-      return [];
-    }
-
-    return githubData.records.filter((record) => {
-      const developerMatch =
-        selectedDeveloper === "All Developers" ||
-        record.developer === selectedDeveloper;
-
-      const timeMatch = isWithinTimeRange(
-        record.timestamp
-      );
-
-      return developerMatch && timeMatch;
-    });
-  }, [
-    selectedDeveloper,
-    selectedTimeRange,
-    selectedSource,
-  ]);
+    return filteredEvents
+      .filter(
+        (event) => event.source === "github"
+      )
+      .map((event) => ({
+        developer: event.developer,
+        repo: event.repository,
+        action: event.event_type,
+        message: event.message,
+        timestamp: event.event_time,
+      }));
+  }, [filteredEvents]);
 
   const filteredSlack = useMemo(() => {
-    if (
-      selectedSource !== "All Sources" &&
-      selectedSource !== "Slack"
-    ) {
-      return [];
-    }
-
-    return slackData.records.filter((record) => {
-      const developerMatch =
-        selectedDeveloper === "All Developers" ||
-        record.user === selectedDeveloper;
-
-      const timeMatch = isWithinTimeRange(
-        record.timestamp
-      );
-
-      return developerMatch && timeMatch;
-    });
-  }, [
-    selectedDeveloper,
-    selectedTimeRange,
-    selectedSource,
-  ]);
+    return filteredEvents
+      .filter(
+        (event) => event.source === "slack"
+      )
+      .map((event) => ({
+        user: event.developer,
+        channel: event.channel,
+        message: event.message,
+        timestamp: event.event_time,
+      }));
+  }, [filteredEvents]);
 
   const filteredIde = useMemo(() => {
-    if (
-      selectedSource !== "All Sources" &&
-      selectedSource !== "IDE"
-    ) {
-      return [];
-    }
-
-    return ideData.records.filter((record) => {
-      const developerMatch =
-        selectedDeveloper === "All Developers" ||
-        record.developer === selectedDeveloper;
-
-      const timeMatch = isWithinTimeRange(
-        record.timestamp
-      );
-
-      return developerMatch && timeMatch;
-    });
-  }, [
-    selectedDeveloper,
-    selectedTimeRange,
-    selectedSource,
-  ]);
+    return filteredEvents
+      .filter(
+        (event) => event.source === "ide"
+      )
+      .map((event) => ({
+        developer: event.developer,
+        language: event.language,
+        file: event.file_path,
+        minutes_coding: event.duration_minutes,
+        timestamp: event.event_time,
+      }));
+  }, [filteredEvents]);
 
   /*
    * --------------------------------------------------
@@ -191,17 +220,11 @@ function App() {
     totalCodingMinutes / 60
   ).toFixed(1);
 
-  const activeDevelopers = new Set([
-    ...filteredGithub.map(
-      (record) => record.developer
-    ),
-    ...filteredSlack.map(
-      (record) => record.user
-    ),
-    ...filteredIde.map(
-      (record) => record.developer
-    ),
-  ]);
+  const activeDevelopers = new Set(
+    filteredEvents.map(
+      (event) => event.developer
+    )
+  );
 
   /*
    * --------------------------------------------------
@@ -210,36 +233,18 @@ function App() {
    */
 
   const activityTimeline = useMemo(() => {
-    const events = [];
-
-    filteredGithub.forEach((record) => {
-      events.push({
-        time: record.timestamp,
-        source: "GitHub",
-        developer: record.developer,
+    return filteredEvents
+      .map((event) => ({
+        time: event.event_time,
+        source:
+          event.source === "github"
+            ? "GitHub"
+            : event.source === "slack"
+            ? "Slack"
+            : "IDE",
+        developer: event.developer,
         activity: 1,
-      });
-    });
-
-    filteredSlack.forEach((record) => {
-      events.push({
-        time: record.timestamp,
-        source: "Slack",
-        developer: record.user,
-        activity: 1,
-      });
-    });
-
-    filteredIde.forEach((record) => {
-      events.push({
-        time: record.timestamp,
-        source: "IDE",
-        developer: record.developer,
-        activity: 1,
-      });
-    });
-
-    return events
+      }))
       .sort(
         (a, b) =>
           new Date(a.time) -
@@ -254,11 +259,7 @@ function App() {
           minute: "2-digit",
         }),
       }));
-  }, [
-    filteredGithub,
-    filteredSlack,
-    filteredIde,
-  ]);
+  }, [filteredEvents]);
 
   /*
    * --------------------------------------------------
@@ -269,42 +270,21 @@ function App() {
   const developerActivity = useMemo(() => {
     return developers
       .map((developer) => {
-        const githubCount =
-          filteredGithub.filter(
-            (record) =>
-              record.developer === developer
-          ).length;
-
-        const slackCount =
-          filteredSlack.filter(
-            (record) =>
-              record.user === developer
-          ).length;
-
-        const ideCount =
-          filteredIde.filter(
-            (record) =>
-              record.developer === developer
-          ).length;
+        const activity = filteredEvents.filter(
+          (event) =>
+            event.developer === developer
+        ).length;
 
         return {
           developer,
-          activity:
-            githubCount +
-            slackCount +
-            ideCount,
+          activity,
         };
       })
       .filter(
         (developer) =>
           developer.activity > 0
       );
-  }, [
-    developers,
-    filteredGithub,
-    filteredSlack,
-    filteredIde,
-  ]);
+  }, [developers, filteredEvents]);
 
   /*
    * --------------------------------------------------
@@ -315,51 +295,33 @@ function App() {
   const contextSwitchData = useMemo(() => {
     return developers
       .map((developer) => {
-        const events = [];
-
-        filteredGithub.forEach((record) => {
-          if (
-            record.developer === developer
-          ) {
-            events.push({
-              source: "GitHub",
-              timestamp: record.timestamp,
-            });
-          }
-        });
-
-        filteredSlack.forEach((record) => {
-          if (record.user === developer) {
-            events.push({
-              source: "Slack",
-              timestamp: record.timestamp,
-            });
-          }
-        });
-
-        filteredIde.forEach((record) => {
-          if (
-            record.developer === developer
-          ) {
-            events.push({
-              source: "IDE",
-              timestamp: record.timestamp,
-            });
-          }
-        });
-
-        events.sort(
-          (a, b) =>
-            new Date(a.timestamp) -
-            new Date(b.timestamp)
-        );
+        const developerEvents =
+          filteredEvents
+            .filter(
+              (event) =>
+                event.developer ===
+                developer
+            )
+            .map((event) => ({
+              source: event.source,
+              timestamp: event.event_time,
+            }))
+            .sort(
+              (a, b) =>
+                new Date(a.timestamp) -
+                new Date(b.timestamp)
+            );
 
         let switches = 0;
 
-        for (let i = 1; i < events.length; i++) {
+        for (
+          let i = 1;
+          i < developerEvents.length;
+          i++
+        ) {
           if (
-            events[i].source !==
-            events[i - 1].source
+            developerEvents[i].source !==
+            developerEvents[i - 1].source
           ) {
             switches += 1;
           }
@@ -374,12 +336,7 @@ function App() {
         (developer) =>
           developer.switches > 0
       );
-  }, [
-    developers,
-    filteredGithub,
-    filteredSlack,
-    filteredIde,
-  ]);
+  }, [developers, filteredEvents]);
 
   /*
    * --------------------------------------------------
@@ -389,14 +346,16 @@ function App() {
 
   const MINUTES_PER_SWITCH = 5;
 
-  const contextSwitchTax = contextSwitchData.map(
-    (developer) => ({
-      developer: developer.developer,
-      lostMinutes:
-        developer.switches *
-        MINUTES_PER_SWITCH,
-    })
-  );
+  const contextSwitchTax =
+    contextSwitchData.map(
+      (developer) => ({
+        developer:
+          developer.developer,
+        lostMinutes:
+          developer.switches *
+          MINUTES_PER_SWITCH,
+      })
+    );
 
   const totalContextSwitches =
     contextSwitchData.reduce(
@@ -457,9 +416,11 @@ function App() {
           let status = "Stable";
 
           if (switches >= 3) {
-            status = "High Cognitive Load";
+            status =
+              "High Cognitive Load";
           } else if (switches >= 2) {
-            status = "Moderate Cognitive Load";
+            status =
+              "Moderate Cognitive Load";
           } else if (
             codingMinutes >= 45
           ) {
@@ -544,7 +505,8 @@ function App() {
 
   if (totalContextSwitches >= 6) {
     teamCognitiveLoad = "High";
-    teamFlowStatus = "Needs Attention";
+    teamFlowStatus =
+      "Needs Attention";
   } else if (totalContextSwitches >= 3) {
     teamCognitiveLoad = "Medium";
     teamFlowStatus = "Moderate";
@@ -554,6 +516,79 @@ function App() {
     productivityLoss = "High";
   } else if (totalLostMinutes >= 15) {
     productivityLoss = "Medium";
+  }
+
+  /*
+   * --------------------------------------------------
+   * Loading / Error states
+   * --------------------------------------------------
+   */
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "#f8fafc",
+          fontFamily: "Arial, sans-serif",
+        }}
+      >
+        <Card>
+          <Title>
+            Loading CogniStream...
+          </Title>
+          <Text
+            style={{
+              marginTop: "10px",
+            }}
+          >
+            Fetching developer activity from
+            ClickHouse through FastAPI.
+          </Text>
+        </Card>
+      </div>
+    );
+  }
+
+  if (apiError) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "#f8fafc",
+          fontFamily: "Arial, sans-serif",
+          padding: "30px",
+        }}
+      >
+        <Card>
+          <Title>
+            CogniStream API Connection Error
+          </Title>
+
+          <Text
+            style={{
+              marginTop: "10px",
+            }}
+          >
+            {apiError}
+          </Text>
+
+          <Text
+            style={{
+              marginTop: "10px",
+            }}
+          >
+            API URL: {API_BASE_URL}
+          </Text>
+        </Card>
+      </div>
+    );
   }
 
   /*
@@ -675,21 +710,10 @@ function App() {
                 backgroundColor: "white",
               }}
             >
-              <option>
-                All Time
-              </option>
-
-              <option>
-                Morning
-              </option>
-
-              <option>
-                Afternoon
-              </option>
-
-              <option>
-                Evening
-              </option>
+              <option>All Time</option>
+              <option>Morning</option>
+              <option>Afternoon</option>
+              <option>Evening</option>
             </select>
           </div>
 
@@ -713,10 +737,7 @@ function App() {
                 backgroundColor: "white",
               }}
             >
-              <option>
-                All Sources
-              </option>
-
+              <option>All Sources</option>
               <option>GitHub</option>
               <option>Slack</option>
               <option>IDE</option>
@@ -841,7 +862,9 @@ function App() {
           </Card>
 
           <Card>
-            <Text>Most Used Data Source</Text>
+            <Text>
+              Most Used Data Source
+            </Text>
             <Metric>
               {mostUsedSource
                 ? mostUsedSource.name
@@ -1017,7 +1040,6 @@ function App() {
                   >
                     Developer
                   </th>
-
                   <th
                     style={{
                       textAlign: "left",
@@ -1026,7 +1048,6 @@ function App() {
                   >
                     Repository
                   </th>
-
                   <th
                     style={{
                       textAlign: "left",
@@ -1035,7 +1056,6 @@ function App() {
                   >
                     Action
                   </th>
-
                   <th
                     style={{
                       textAlign: "left",
@@ -1044,7 +1064,6 @@ function App() {
                   >
                     Message
                   </th>
-
                   <th
                     style={{
                       textAlign: "left",
@@ -1152,7 +1171,6 @@ function App() {
                   >
                     User
                   </th>
-
                   <th
                     style={{
                       textAlign: "left",
@@ -1161,7 +1179,6 @@ function App() {
                   >
                     Channel
                   </th>
-
                   <th
                     style={{
                       textAlign: "left",
@@ -1170,7 +1187,6 @@ function App() {
                   >
                     Message
                   </th>
-
                   <th
                     style={{
                       textAlign: "left",
@@ -1270,7 +1286,6 @@ function App() {
                   >
                     Developer
                   </th>
-
                   <th
                     style={{
                       textAlign: "left",
@@ -1279,7 +1294,6 @@ function App() {
                   >
                     Language
                   </th>
-
                   <th
                     style={{
                       textAlign: "left",
@@ -1288,7 +1302,6 @@ function App() {
                   >
                     File
                   </th>
-
                   <th
                     style={{
                       textAlign: "left",
@@ -1297,7 +1310,6 @@ function App() {
                   >
                     Coding Minutes
                   </th>
-
                   <th
                     style={{
                       textAlign: "left",
@@ -1382,4 +1394,3 @@ function App() {
 }
 
 export default App;
-
